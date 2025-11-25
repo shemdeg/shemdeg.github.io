@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Weekge</title>
+<title>SHEMDEG</title>
 
   <meta name="description" content="Weekge (Week.ge) — უნივერსიტეტის საგნების და სილაბუსების პლატფორმა. ნახე შენი საგნები კვირების მიხედვით და იოლი ნავიგაციით.">
   <meta name="theme-color" content="#0B1216">
@@ -13,6 +13,11 @@
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap');
 </style>
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet" />
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Georgian:wdth,wght@62.5..100,100..900&display=swap" rel="stylesheet">
+
 <style>
 
 
@@ -43,7 +48,9 @@
 
     --bgblur: blur(10px);
 
-    --font: calibri, sans-serif;
+    --font: "Noto Sans Georgian", sans-serif;
+
+    font-family: "Noto Sans Georgian", sans-serif;
   }
 
   body{
@@ -54,7 +61,6 @@
     flex-direction: column;
     height:100vh;
     overflow:hidden;
-    font-family:'calibri', sans-serif;
     position: relative;
   }
 
@@ -136,7 +142,7 @@
   }
 
   #resources-view .card h4 {
-    font-size: 1.6rem;
+    font-size: 1.4rem;
   }
 
   #resources-view .link-button {
@@ -298,8 +304,8 @@
     justify-content:flex-start;
     align-items:center;
     color:#fff;
-    font-weight:700;
-    font-size:1.3rem;
+    font-weight:500;
+    font-size:1.2rem;
     cursor:pointer;
     transition:transform .2s ease,border-color .2s ease,background .2s ease;
     user-select: none; /* Prevent text selection */
@@ -377,11 +383,12 @@
     align-items: center;
     color: #fff;
     font-weight: 700;
-    font-size: 1.2rem; /* Slightly smaller font than weeks */
+    font-size: 1rem; /* Slightly smaller font than weeks */
     cursor: pointer;
     transition: background .2s ease;
     border-radius: 0; /* No rounded edges */
     padding: 30px 0; /* No padding */
+    font-family: "Noto Sans Georgian", sans-serif;
   }
 
   .week-toggle-buttons button:hover {
@@ -549,8 +556,8 @@
     gap: 2px;
   }
   
-  h4{font-size: 1.2rem;}
-  h5{font-size: 1.1rem;}
+  h4{font-size: 1rem;}
+  h5{font-size: 0.8rem;}
 
 
 
@@ -765,7 +772,7 @@
     background: var(--bg2); /* Brighter background */
     border: 1px solid var(--line); /* Border around the block */
     flex-wrap: wrap;
-    font-size: 1.4rem;
+    font-size: 1.2rem;
   }
   .item-settings > div:first-child { flex: 1; }
   .item-settings button {
@@ -920,12 +927,12 @@
     }
 
     .card-symbol-container .material-symbols-outlined {
-      font-size: 2.5rem; /* Smaller symbol size */
+      font-size: 2.1rem; /* Smaller symbol size */
       border-radius: 20px;
     }
 
     h4 { font-size: 1rem;} /* Even smaller subject name */
-    h5 { font-size: 0.9rem; } /* Smaller lecture type */
+    h5 { font-size: 0.6rem; } /* Smaller lecture type */
 
     .card-sub-top {
       flex: unset; /* Make height adjust to content */
@@ -1419,13 +1426,13 @@ fetch("https://raw.githubusercontent.com/WEEKGE/live/main/config.json")
   ];
 
   const THEME_COLORS = [
-    { name: "Red", value: "#F31616", textColor: "white" },
+    { name: "Red", value: "#E20000", textColor: "white" },
     { name: "Blue", value: "#1F40ED", textColor: "white" },
-    { name: "Green", value: "#23D929", textColor: "black" },
-    { name: "Yellow", value: "#FFBD24", textColor: "black" },
-    { name: "Purple", value: "#591AB0", textColor: "white" },
-    { name: "Cyan", value: "#1DE0C9", textColor: "black" },
-    { name: "Pink", value: "#ff0043", textColor: "black" }
+    { name: "Green", value: "#18CE00", textColor: "fff" },
+    { name: "Yellow", value: "#E19200", textColor: "black" },
+    { name: "Purple", value: "#6B00CE", textColor: "white" },
+    { name: "Cyan", value: "#00ACCE", textColor: "black" },
+    { name: "Pink", value: "#CE0064", textColor: "black" }
   ];
   const colorMap = {
     yellow: ["#ffd600", "#000"],
@@ -1435,17 +1442,17 @@ fetch("https://raw.githubusercontent.com/WEEKGE/live/main/config.json")
   };
 
   const BACKGROUND_IMAGES = [
-    "https://raw.githubusercontent.com/WEEKGE/live/refs/heads/main/wallpapers/WGW%203.jpg",
-    "https://raw.githubusercontent.com/WEEKGE/live/refs/heads/main/wallpapers/WGW%209.jpg",
-    "https://raw.githubusercontent.com/WEEKGE/live/refs/heads/main/wallpapers/WGW%2010.jpg",
-    "https://raw.githubusercontent.com/WEEKGE/live/refs/heads/main/wallpapers/WGW%208.jpeg",
-    "https://raw.githubusercontent.com/WEEKGE/live/refs/heads/main/wallpapers/WGW%2011.jpg",
-    "https://raw.githubusercontent.com/WEEKGE/live/refs/heads/main/wallpapers/WGW%2012.jpg",
-    "https://raw.githubusercontent.com/WEEKGE/live/refs/heads/main/wallpapers/Japanese%20cover.png",
-    "https://raw.githubusercontent.com/WEEKGE/live/refs/heads/main/wallpapers/glowing%20balls%20by%20dg.png",
-    "https://raw.githubusercontent.com/WEEKGE/live/refs/heads/main/wallpapers/oak%20street%2097%2016x9.png",
-    "https://raw.githubusercontent.com/WEEKGE/live/refs/heads/main/wallpapers/space%20render%204k.png",
-    "https://raw.githubusercontent.com/WEEKGE/live/refs/heads/main/wallpapers/sunrize%20render.png",
+    "/main/wallpapers/WGW%203.jpg",
+    "/wallpapers/WGW%209.jpg",
+    "/wallpapers/WGW%2010.jpg",
+    "/wallpapers/WGW%208.jpeg",
+    "/wallpapers/WGW%2011.jpg",
+    "/wallpapers/WGW%2012.jpg",
+    "/wallpapers/Japanese%20cover.png",
+    "/wallpapers/glowing%20balls%20by%20dg.png",
+    "/wallpapers/oak%20street%2097%2016x9.png",
+    "/wallpapers/space%20render%204k.png",
+    "/wallpapers/sunrize%20render.png",
 
 
   ];
@@ -2804,7 +2811,7 @@ fetch("https://raw.githubusercontent.com/WEEKGE/live/main/config.json")
 
   // Anti-console abuse script
   (function() {
-    const enabled = 0; // SSSSSS
+    const enabled = 1; // SSSSSS
 
     if (!enabled) {
       return;
@@ -2838,3 +2845,4 @@ fetch("https://raw.githubusercontent.com/WEEKGE/live/main/config.json")
 </script>
 </body>
 </html>
+
