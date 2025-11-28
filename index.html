@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Weekge</title>
+<title>Shemdeg</title>
 
   <meta name="description" content="Weekge (Week.ge) — უნივერსიტეტის საგნების და სილაბუსების პლატფორმა. ნახე შენი საგნები კვირების მიხედვით და იოლი ნავიგაციით.">
   <meta name="theme-color" content="#0B1216">
@@ -20,6 +20,7 @@
     --text-muted-color: #8A8A8A;
     --accent-color: #BB86FC;
     --accent-variant-color: #3700B3;
+    --text-on-accent-color: #000000;
     --border-radius: 16px;
     --font-family: "Noto Sans Georgian", sans-serif;
   }
@@ -105,11 +106,34 @@
     to { opacity: 1; transform: translateY(0); }
   }
 
-  /* === WIDGET GRID SYSTEM === */
+  /* === WIDGET GRID SYSTEM (Base) === */
   .widget-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    display: grid;    
     gap: 20px;
+  }
+  
+  /* === VIEW-SPECIFIC GRID STYLES === */
+  #live-view .widget-grid,
+  #resources-view .widget-grid,
+  #settings-view .widget-grid {
+    height: 100%;
+  }
+
+  #home-grid {
+    grid-template-columns: repeat(5, 1fr);
+    grid-template-rows: repeat(2, 1fr); /* Enforce a 5x2 grid */
+    height: calc(100% - 70px); /* Adjust height to account for the weeks bar */    
+    min-height: 0; /* Prevent grid from growing beyond its container */
+  }
+  
+  #resources-grid {
+    grid-template-columns: repeat(4, 1fr); /* Always 4 columns on desktop */
+    align-content: start; /* Align items to the start of the grid */
+  }
+
+  /* Make the last item in the resources grid span full width if it's on a new row by itself */
+  #resources-grid .widget-card:last-child:nth-child(4n - 3) {
+    grid-column: 1 / -1;
   }
 
   /* === WIDGET CARD STYLING === */
@@ -121,6 +145,7 @@
     flex-direction: column;
     gap: 15px;
     transition: box-shadow 0.2s ease;
+    overflow: hidden; /* Prevent content from spilling out of the card */
   }
   .widget-card:hover {
     box-shadow: 0 8px 20px rgba(0,0,0,0.2);
@@ -151,12 +176,18 @@
     color: var(--text-muted-color);
   }
 
+  .subject-card.is-upcoming {
+    background-color: color-mix(in srgb, var(--accent-color) 8%, var(--widget-color));
+    border: 1px solid color-mix(in srgb, var(--accent-color) 20%, transparent);
+  }
+
   .subject-card .topic {
     font-size: 1rem;
     line-height: 1.5;
-    color: var(--text-muted-color);
-    white-space: pre-wrap;
-    word-wrap: break-word;
+    color: var(--text-muted-color);    
+    white-space: nowrap; /* Keep text on a single line */
+    text-overflow: ellipsis; /* Add ... for overflow */
+    overflow: hidden;
   }
   .subject-card .embed-links {
     display: flex;
@@ -191,10 +222,10 @@
   .embed-link .icon-circle.is-custom {
     width: auto; /* Auto-width for custom links */
     border-radius: 25px; /* Pill shape */
-    padding: 0 15px;
+    padding: 0 24px 0 20px;
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 10px;
   }
   .embed-link:hover .icon-circle {
     background-color: var(--accent-variant-color);
@@ -213,12 +244,11 @@
 
   /* === RESOURCES PAGE === */
   #resources-view .widget-card {
-    flex-direction: row;
-    align-items: center;
-    justify-content: space-between;
+    /* Revert to default column layout by removing row-specific styles */
   }
-  #resources-view .widget-title {
-    flex-grow: 1;
+  #resources-view .embed-links {
+    margin-top: auto; /* Push links to the bottom */
+    padding-top: 10px;
   }
 
   .subjects-widget-container{
@@ -229,31 +259,23 @@
   #settings-grid {
     grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
     height: 100%;
+    min-height: 0;
     align-content: start;
   }
   @media screen and (min-width: 1024px) {
     #settings-grid {
-      grid-template-columns: 2fr 1fr; /* 2/3 for subjects, 1/3 for others */
+      grid-template-columns: 1fr 1fr 1fr; /* Three equal columns */
     }
-    .subjects-widget-container {
-      grid-column: 1 / 2;
-      display: flex;
-      flex-direction: row;
-      gap: 20px;
-    }
-    .side-widget-container {
-      grid-column: 2 / 3;
+    .settings-column {
       display: flex;
       flex-direction: column;
       gap: 20px;
+      min-height: 0; /* Prevent flexbox overflow */
+      height: 100%; /* Make columns fill the grid cell height */
     }
-    .subjects-widget-container > .widget-card {
-      flex: 1 1 0; /* Allow widgets to grow and shrink */
-    }
-    .widget-card { min-height: 0; } /* Prevent flex items from overflowing their container */
-    #my-subjects-widget {
-      /* Ensure the widget itself is a flex container to manage its children's height */
-      display: flex;
+    .settings-column > .widget-card {
+      flex-grow: 1; /* Allow widgets to grow to fill the column */
+      display: flex; /* Ensure widgets are flex containers */
     }
   }
 
@@ -265,7 +287,7 @@
     border-bottom: 1px solid rgba(255,255,255,0.05);
     flex-wrap: wrap;
   }
-  .settings-item:last-child { border-bottom: none; padding-bottom: 0; }
+  .settings-item:last-child { border-bottom: none; }
   .settings-item .name { flex-grow: 1; font-weight: 500; }
   .settings-item .action-btn {
     background-color: var(--accent-color);
@@ -277,21 +299,73 @@
     display: grid; place-items: center;
     transition: background-color 0.2s ease;
   }
-  .settings-item .action-btn.remove { 
+  .settings-item .action-btn.added {
+    background-color: transparent;
+    color: var(--accent-color);
+    border: 1px solid var(--accent-color);
+    cursor: default;
+  }
+  .widget-card .action-btn.remove { 
     background-color: #B00020; 
     color: white; 
-    position: absolute;
-    top: 10px;
-    right: 0;
+    /* position: absolute;
+    top: 15px;
+    right: 15px; */
+    /* height: 40px; */
+    border-radius: 12px;
+    align-self: flex-start; /* Align to top of flex container */
   }
   .settings-item .action-btn:hover { filter: brightness(1.2); }
   .settings-item .day-time-select {
     background-color: rgba(255,255,255,0.05);
-    color: var(--text-color);
-    border: 1px solid transparent;
+    color: #ffffff;
     border-radius: 8px;
     padding: 8px 12px;
     font-family: var(--font-family);
+    border: 1px solid transparent;
+    transition: border-color 0.2s ease;
+    font-weight: 600;
+  }
+  .widget-card .day-time-select {
+    background-color: var(--accent-color);
+    color: var(--text-on-accent-color);
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='white' class='bi bi-chevron-down' viewBox='0 0 16 16'%3E%3Cpath fill-rule='evenodd' d='M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    background-size: 1em;
+  }
+  .day-time-select option { background-color: var(--widget-color); color: var(--text-color); }
+  .settings-item .day-time-select:hover, .duration-selector select:hover {
+    border-color: var(--accent-color);
+  }
+  .search-input-container {
+    position: relative;
+    margin-bottom: 15px;
+  }
+  .search-input-container .material-symbols-outlined {
+    position: absolute;
+    left: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-muted-color);
+  }
+  #catalog-search {
+    width: 100%;
+    padding: 15px 20px 15px 45px;
+    background-color: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 999px;
+    color: var(--text-color);
+    font-size: 1rem;
+    font-family: var(--font-family);
+    outline: none;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  }
+  #catalog-search:focus {
+    border-color: var(--accent-color);
   }
   .weekday-chooser {
     display: flex;
@@ -303,7 +377,7 @@
   .weekday-btn {
     width: 42px;
     height: 38px;
-    border-radius: 50%;
+    border-radius: 12px;
     border: 1px solid transparent;
     background-color: rgba(255,255,255,0.05);
     color: var(--text-muted-color);
@@ -321,10 +395,21 @@
     background-color: var(--accent-color);
     color: var(--bg-color);
   }
-  .settings-widget-content { flex-grow: 1; min-height: 0; overflow-y: auto; padding-right: 10px; }
+  .settings-widget-content { flex-grow: 1; min-height: 0; overflow-y: auto; padding-right: 5px; }
   .settings-widget-content::-webkit-scrollbar { width: 6px; }
   .settings-widget-content::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 3px; }
 
+  .list-nav-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+  .list-nav-btn {
+    background: rgba(255,255,255,0.08);
+    border: none; color: var(--text-color); border-radius: 8px;
+    width: 36px; height: 36px; cursor: pointer; display: grid; place-items: center;
+  }
+  .list-nav-btn:disabled { opacity: 0.3; cursor: not-allowed; }
   #settings-view .theme-selector .themes {
     display: flex;
     flex-wrap: wrap;
@@ -355,7 +440,7 @@
     border-radius: 50%;
   }
 
-  #settings-view{
+  #settings-view {
     height: 100%;
   }
   #settings-view .save-button {
@@ -423,11 +508,9 @@
   .nav-item.active .material-symbols-outlined {
     font-variation-settings: 'FILL' 1;
   }
-
-  /* === WEEKS BAR (reimagined as dropdown) === */
-  #weeks-bar-container {
-    margin-bottom: 20px;
-    position: relative;
+  .nav-item.active {
+    background-color: var(--accent-variant-color);
+    color: var(--text-on-accent-color); /* Active icon color */
   }
   #week-selector {
     width: 100%;
@@ -444,11 +527,72 @@
     font-weight: 600;
   }
 
+  /* === WEEKS BAR (reimagined as dropdown) === */
+  #weeks-bar-container {
+    margin-bottom: 20px;
+    position: relative;
+  }
+
+  .weeks-chooser {
+    display: flex;
+    gap: 12px;    
+    width: 100%;
+    overflow-x: auto;
+    scrollbar-width: none;
+    padding-bottom: 5px;
+  }
+  .weeks-chooser::-webkit-scrollbar { display: none; }
+
+  .week-button {
+    flex: 1;
+    padding: 12px 5px;
+    border-radius: 999px;
+    background-color: var(--widget-color);
+    color: var(--text-muted-color);
+    border: 1px solid transparent;
+    text-align: center;
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    font-size: 0.8rem;
+    white-space: nowrap;
+  }
+  .week-button.is-current.active {
+    color: var(--text-on-accent-color); /* Ensure text is white when it's the active current week */
+  }
+
+  .week-button:hover { background-color: color-mix(in srgb, var(--widget-color) 80%, white 20%); }
+  .week-button.active { background-color: var(--accent-color); color: var(--text-on-accent-color); }
+  .week-button.is-current { border: 1px solid var(--accent-color); color: var(--accent-color); }
+
   .empty-placeholder {
     text-align: center;
     color: var(--text-muted-color);
     padding: 40px;
     font-size: 1.1rem;
+  }
+
+  .weeks-mobile-nav {
+    display: none; /* Hidden by default */
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px;
+    background-color: var(--widget-color);
+    border-radius: var(--border-radius);
+  }
+  .weeks-mobile-nav .nav-arrow {
+    background: transparent;
+    border: none;
+    color: var(--text-color);
+    cursor: pointer;
+  }
+   .weeks-mobile-nav .nav-arrow:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+  }
+  .weeks-mobile-nav .current-week-display {
+    font-weight: 600;
+    font-size: 1rem;
   }
 
   @media screen and (max-width: 768px) {
@@ -458,12 +602,26 @@
     .widget-grid {
       grid-template-columns: 1fr;
     }
+    #home-grid {
+      grid-template-rows: none; /* Remove fixed rows for mobile */
+      grid-template-columns: 1fr; /* Ensure single column layout */
+    }
+    #home-grid, #resources-grid, #settings-grid {
+      height: auto; /* Allow grids to grow with content on mobile */
+    }
+    #live-time-card {
+      display: none; /* Hide time widget on mobile */
+    }
+    .weeks-chooser {
+      display: none; /* Hide desktop weeks bar on mobile */
+    }
+    .weeks-mobile-nav {
+      display: flex; /* Show mobile weeks nav */
+    }
     header h1 {
       font-size: 1.8rem;
     }
     .bottom-nav {
-      width: calc(100% - 30px);
-      justify-content: space-around;
       bottom: 15px;
     }
     .nav-item {
@@ -586,7 +744,7 @@ fetch("https://raw.githubusercontent.com/WEEKGE/live/main/config.json")
 
 function startWeekge() {
   const auth = firebase.auth(), db = firebase.firestore();
-  let user = null, catalog = [], selected = [], cache = {}, weekDates = [], userDays = {}, userThemeName = null, lectureDuration = "03:00";
+  let user = null, catalog = [], selected = [], cache = {}, weekDates = [], userDays = {}, userThemeName = null, lectureDuration = "03:00", mySubjectsPageIndex = 0;
   let currentWeekData = null, selectedWeekNumber = null;
 
   const daysOfWeek = ["ორშაბათი","სამშაბათი","ოთხშაბათი","ხუთშაბათი","პარასკევი","შაბათი","კვირა"];
@@ -611,10 +769,10 @@ function startWeekge() {
   ];
 
   const THEMES = {
-    "Default": { bg: "#121212", widget: "#1E1E1E", text: "#fff", accent: "#BB86FC", accentVariant: "#3700B3" },
-    "Ocean": { bg: "#0F2027", widget: "#203A43", text: "#fff", accent: "#1488CC", accentVariant: "#2B32B2" },
-    "Sunset": { bg: "#2C0A1E", widget: "#4F1C3A", text: "#fff", accent: "#FF8C61", accentVariant: "#C83C66" },
-    "Forest": { bg: "#1A2922", widget: "#2E463A", text: "#fff", accent: "#56C271", accentVariant: "#237A41" },
+    "Default": { bg: "#121212", widget: "#1E1E1E", text: "#fff", accent: "#fff", accentVariant: "#fff", textOnAccent: "#000000" },
+    "Ocean": { bg: "#0F2027", widget: "#203A43", text: "#ffffff", accent: "#1488CC", accentVariant: "#2B32B2", textOnAccent: "#FFFFFF" },
+    "Sunset": { bg: "#2C0A1E", widget: "#4F1C3A", text: "#ffffff", accent: "#FF8C61", accentVariant: "#C83C66", textOnAccent: "#000000" },
+    "Forest": { bg: "#1A2922", widget: "#2E463A", text: "#ffffff", accent: "#56C271", accentVariant: "#237A41", textOnAccent: "#000000" },
   };
 
   function applyTheme(themeName) {
@@ -625,10 +783,11 @@ function startWeekge() {
     root.style.setProperty('--text-color', theme.text);
     root.style.setProperty('--accent-color', theme.accent);
     root.style.setProperty('--accent-variant-color', theme.accentVariant);
+    root.style.setProperty('--text-on-accent-color', theme.textOnAccent);
     userThemeName = themeName;
   }
 
-  async function saveTheme(themeName) {
+  async function saveTheme(themeName) { // This function is for theme only
     applyTheme(themeName);
     if (user) {
       await db.collection("users").doc(user.uid).set({ userThemeName: themeName }, { merge: true });
@@ -636,7 +795,13 @@ function startWeekge() {
     setCookie('userThemeName', themeName, 365);
   }
 
-  async function saveSettings() {
+  let saveTimeout;
+  function autoSave() {
+    clearTimeout(saveTimeout);
+    saveTimeout = setTimeout(saveSettings, 1200); // Debounce saves by 1.2 seconds
+  }
+
+  async function saveSettings() { // This now handles subjects and duration
     if (user) {
       await db.collection("users").doc(user.uid).set({ 
         subjects: selected, 
@@ -648,8 +813,10 @@ function startWeekge() {
     setCookie('userDays', JSON.stringify(userDays), 365);
     setCookie('lectureDuration', lectureDuration, 365);
 
-    // No full boot, just re-render the pages that need updates
-    await bootAfterLogin(); // Re-boot to apply changes everywhere
+    // Re-render pages to reflect changes without a full reload
+    renderHomePage();
+    renderResourcesPage();
+    console.log("Settings auto-saved.");
   }
 
   /* === AUTHENTICATION === */
@@ -769,7 +936,7 @@ function startWeekge() {
     const timeEl = el('div', { className: 'time' });
     const dateEl = el('div', { className: 'date' });
     const timeCard = el('div', { id: 'live-time-card', className: 'widget-card' }, [timeEl, dateEl]);
-    
+
     $('#home-grid').prepend(timeCard);
 
     function updateTime() {
@@ -786,25 +953,59 @@ function startWeekge() {
     const container = $('#weeks-bar-container');
     container.innerHTML = '';
 
-    const select = el('select', { id: 'week-selector' });
-    SEMESTER_WEEKS.forEach(w => {
-      const isCurrent = currentWeekData && w.n === currentWeekData.n;
-      const option = el('option', { 
-        value: w.n, 
-        textContent: `კვირა ${w.n}` + (isCurrent ? ' (მიმდინარე)' : '')
+    // --- Mobile Navigator ---
+    const prevWeek = () => {
+        const currentIndex = SEMESTER_WEEKS.findIndex(w => w.n === selectedWeekNumber);
+        if (currentIndex > 0) {
+            selectedWeekNumber = SEMESTER_WEEKS[currentIndex - 1].n;
+            renderHomePage();
+            renderWeeksBar();
+        }
+    };
+    const nextWeek = () => {
+        const currentIndex = SEMESTER_WEEKS.findIndex(w => w.n === selectedWeekNumber);
+        if (currentIndex < SEMESTER_WEEKS.length - 1) {
+            selectedWeekNumber = SEMESTER_WEEKS[currentIndex + 1].n;
+            renderHomePage();
+            renderWeeksBar();
+        }
+    };
+    const mobileNav = el('div', { className: 'weeks-mobile-nav' });
+    mobileNav.append(el('button', { className: 'nav-arrow', onclick: prevWeek, disabled: selectedWeekNumber === 1 }, [el('span', {className: 'material-symbols-outlined', textContent: 'arrow_back_ios'})]));
+    mobileNav.append(el('div', { className: 'current-week-display', textContent: `კვირა ${selectedWeekNumber}` }));
+    mobileNav.append(el('button', { className: 'nav-arrow', onclick: nextWeek, disabled: selectedWeekNumber === SEMESTER_WEEKS.length }, [el('span', {className: 'material-symbols-outlined', textContent: 'arrow_forward_ios'})]));
+    container.append(mobileNav);
+
+    // --- Desktop Chooser (only render on non-mobile screens) ---
+    // We check this in JS to avoid rendering the scrollable element on mobile at all.
+    if (window.matchMedia("(min-width: 769px)").matches) {
+      const chooser = el('div', { className: 'weeks-chooser' });
+  
+      SEMESTER_WEEKS.forEach(w => {
+        const isCurrent = currentWeekData && w.n === currentWeekData.n;
+        const button = el('button', {
+          className: 'week-button',
+          textContent: `კვირა ${w.n}`
+        });
+  
+        button.dataset.week = w.n;
+  
+        if (w.n === selectedWeekNumber) {
+          button.classList.add('active');
+        }
+        if (isCurrent) {
+          button.classList.add('is-current');
+        }
+  
+        button.onclick = () => {
+          selectedWeekNumber = w.n;
+          renderHomePage();
+          renderWeeksBar(); // Re-render to update active state
+        };
+        chooser.append(button);
       });
-      if (w.n === selectedWeekNumber) {
-        option.selected = true;
-      }
-      select.append(option);
-    });
-
-    select.addEventListener('change', (e) => {
-      selectedWeekNumber = parseInt(e.target.value, 10);
-      renderHomePage();
-    });
-
-    container.append(select);
+      container.append(chooser);
+    }
   }
 
   /* === RENDERING FUNCTIONS === */
@@ -851,21 +1052,23 @@ function startWeekge() {
     const todayDayIndex = new Date().getDay() === 0 ? 6 : new Date().getDay() - 1;
 
     const subjectsForWeek = selected.map(id => {
-        const [hours, minutes] = lectureDuration.split(':').map(Number);
-        const lectureDurationMs = (hours * 60 * 60 * 1000) + (minutes * 60 * 1000);
-
-        const now = new Date();
-        const isSelectedWeekCurrent = selectedWeekNumber === (currentWeekData ? currentWeekData.n : -1);
-
-
-
         const subj = cache[id];
         if (!subj) return null;
+
+        // Find the specific data for the currently selected week
+        const weekData = subj.weeks?.find(w => w.week === selectedWeekNumber - 1) || {};
+
         const dayData = userDays?.[id] ?? { day: null, time: null };
+
         return {
             ...subj,
+            // Pass along the specific week's data
+            weekTopic: weekData.topic || '<i>თემა არ არის მითითებული</i>',
+            weekType: weekData.type,
+            weekButtons: weekData.buttons,
             dayIndex: daysOfWeek.indexOf(dayData.day),
-            time: dayData.time
+            time: dayData.time,
+            isScheduled: dayData.day !== null
         };
     }).filter(Boolean);
 
@@ -888,15 +1091,20 @@ function startWeekge() {
     }
 
     subjectsForWeek.forEach(subj => {
-      const weekData = subj.weeks?.find(w => w.week === selectedWeekNumber -1);
-      if (!weekData || !weekData.topic) return; // Only show subjects with content for the week
+      const isUpcoming = subj.isScheduled && subj.dayIndex >= todayDayIndex;
+      const cardClasses = ['widget-card', 'subject-card'];
+      if (isUpcoming) {
+        cardClasses.push('is-upcoming');
+      }
 
-      const card = el('div', { className: 'widget-card subject-card' }, [
+      const card = el('div', { className: cardClasses.join(' ') }, [
         el('h3', { className: 'widget-title', textContent: subj.name }),
-        el('p', { className: 'widget-subtitle', textContent: weekData.type || 'ლექცია' }),
-        el('div', { className: 'topic', innerHTML: weekData.topic }),
-        createEmbedLinks(weekData.buttons)
+        el('p', { className: 'widget-subtitle', textContent: subj.weekType || 'ლექცია' }),
+        el('div', { className: 'topic', innerHTML: subj.weekTopic }),
+        createEmbedLinks(subj.weekButtons)
       ]);
+
+
       grid.append(card);
     });
   }
@@ -908,6 +1116,9 @@ function startWeekge() {
     const subjectsWithGlobalButtons = selected
         .map(id => cache[id])
         .filter(subj => subj && subj.globalButtons && subj.globalButtons.length > 0);
+
+    // Sort subjects alphabetically for consistent order
+    subjectsWithGlobalButtons.sort((a, b) => a.name.localeCompare(b.name, 'ka'));
 
     if (subjectsWithGlobalButtons.length === 0) {
         grid.append(el('p', {className: 'empty-placeholder', textContent: 'არჩეულ საგნებს არ აქვს გლობალური რესურსები.'}));
@@ -927,21 +1138,117 @@ function startWeekge() {
     const grid = $('#settings-grid');
     grid.innerHTML = '';
 
-    // Create containers for the 2/3 + 1/3 layout
-    const subjectsContainer = el('div', { className: 'subjects-widget-container' });
-    const sideContainer = el('div', { className: 'side-widget-container' });
+    // Create containers for the layout
+    const mySubjectsColumn = el('div', { className: 'settings-column' });
+    const catalogColumn = el('div', { className: 'settings-column' });
+    const sideColumn = el('div', { className: 'settings-column' });
 
-    // -- My Subjects Widget --
+    // -- My Subjects Widget (with pagination) --
     const mySubjectsContent = el('div', { className: 'settings-widget-content' });
-    const sortedSelected = selected
-      .map(id => cache[id])
-      .filter(Boolean)
-      .sort((a, b) => a.name.localeCompare(b.name));
+    const pageSize = 3;
+    const sortedSelected = selected.map(id => cache[id]).filter(Boolean).sort((a, b) => a.name.localeCompare(b.name));
+    const maxPage = Math.ceil(sortedSelected.length / pageSize) - 1;
+    
+    // Clamp the start index to valid bounds
+    if (mySubjectsPageIndex > maxPage) {
+      mySubjectsPageIndex = Math.max(0, maxPage);
+    }
 
-    const lectureStartTimes = ["09:00", "11:20", "13:40", "16:00", "18:20"];
-    const dayAbbreviations = ["ორშ", "სამ", "ოთხ", "ხუთ", "პარ", "შაბ", "კვ"];
+    const startIndex = mySubjectsPageIndex * pageSize;
+    const visibleSubjects = sortedSelected.slice(startIndex, startIndex + pageSize);
+    visibleSubjects.forEach(subj => {
+        const subjectWidget = createMySubjectWidget(subj);
+        mySubjectsContent.append(subjectWidget);
+    });
 
-    sortedSelected.forEach(subj => {
+    let mySubjectsCard;
+    if (sortedSelected.length > pageSize) {
+        const upBtn = el('button', { className: 'list-nav-btn', disabled: mySubjectsPageIndex === 0 }, [el('span', {className: 'material-symbols-outlined', textContent: 'expand_less'})]);
+        const downBtn = el('button', { className: 'list-nav-btn', disabled: mySubjectsPageIndex >= maxPage }, [el('span', {className: 'material-symbols-outlined', textContent: 'expand_more'})]);
+        
+        upBtn.onclick = () => { mySubjectsPageIndex = Math.max(0, mySubjectsPageIndex - 1); renderSettingsPage(); };
+        downBtn.onclick = () => { mySubjectsPageIndex = Math.min(mySubjectsPageIndex + 1, maxPage); renderSettingsPage(); };
+
+        const navControls = el('div', { className: 'list-nav-controls' }, [upBtn, downBtn]);
+        const contentWrapper = el('div', { style: 'display: flex; gap: 15px; flex-grow: 1;'}, [mySubjectsContent, navControls]);
+        
+        mySubjectsCard = el('div', { id: 'my-subjects-widget', className: 'widget-card', style: 'flex: 1;' }, [
+            el('h3', { className: 'widget-title', textContent: 'ჩემი საგნები' }),
+            contentWrapper
+        ]);
+    } else {
+        mySubjectsCard = el('div', { id: 'my-subjects-widget', className: 'widget-card', style: 'flex: 1;' }, [
+            el('h3', { className: 'widget-title', textContent: 'ჩემი საგნები' }),
+            mySubjectsContent
+        ]);
+    }
+    mySubjectsColumn.append(mySubjectsCard);
+    // -- Subjects Catalog Widget --
+    const searchInput = el('input', { id: 'catalog-search', type: 'search', placeholder: 'საგნის მოძებნა...' });
+    const searchContainer = el('div', { className: 'search-input-container' }, [
+        el('span', { className: 'material-symbols-outlined', textContent: 'search' }),
+        searchInput
+    ]);
+
+    const catalogContent = el('div', { className: 'settings-widget-content', style: 'padding-right: 0;' });
+    
+    const renderCatalogItems = (filter = '') => {
+        catalogContent.innerHTML = '';
+        let subjectsToShow;
+
+        if (filter) {
+            // If searching, filter the whole sorted catalog
+            const sortedCatalog = [...catalog].sort((a, b) => a.name.localeCompare(b.name));
+            subjectsToShow = sortedCatalog.filter(subj => subj.name.toLowerCase().includes(filter.toLowerCase()));
+        } else {
+            // If not searching, show up to 5 random subjects
+            const shuffled = [...catalog].sort(() => 0.5 - Math.random());
+            subjectsToShow = shuffled.slice(0, 5);
+        }
+
+        subjectsToShow.forEach(subj => {
+            const isAdded = selected.includes(subj.id);
+            let button;
+
+            if (isAdded) {
+                button = el('button', { className: 'action-btn added', disabled: true }, [ el('span', { className: 'material-symbols-outlined', textContent: 'check' }) ]);
+            } else {
+                button = el('button', { className: 'action-btn' }, [ el('span', { className: 'material-symbols-outlined', textContent: 'add' }) ]);
+                button.onclick = () => { selected.push(subj.id); autoSave(); renderSettingsPage(); };
+            }
+            catalogContent.append(el('div', { className: 'settings-item' }, [ el('div', { className: 'name', textContent: subj.name }), button ]));
+        });
+    };
+
+    searchInput.oninput = () => renderCatalogItems(searchInput.value);
+    renderCatalogItems(); // Initial render
+
+    const catalogCard = el('div', { id: 'catalog-widget', className: 'widget-card', style: 'flex: 1; min-height: 0;' }, [
+      el('h3', { className: 'widget-title', textContent: 'საგნების კატალოგი' }),
+      searchContainer,
+      catalogContent
+    ]);
+
+    catalogColumn.append(catalogCard);
+
+    // -- Lecture Duration Widget --
+    const durationCard = createDurationWidget();
+    sideColumn.append(durationCard);
+
+    // -- Theme Selector Widget --
+    const themeCard = createThemeWidget();
+    sideColumn.append(themeCard);
+
+    // -- Logout Widget --
+    const logoutCard = createLogoutWidget();
+    sideColumn.append(logoutCard);
+
+    grid.append(mySubjectsColumn, catalogColumn, sideColumn);
+  }
+
+  function createMySubjectWidget(subj) {
+      const lectureStartTimes = ["09:00", "11:20", "13:40", "16:00", "18:20"];
+      const dayAbbreviations = ["ორშ", "სამ", "ოთხ", "ხუთ", "პარ", "შაბ", "კვ"];
       const currentDay = userDays[subj.id]?.day;
 
       const timeSelect = el('select', { className: 'day-time-select' });
@@ -953,7 +1260,7 @@ function startWeekge() {
       timeSelect.onchange = () => {
         if (!userDays[subj.id]) userDays[subj.id] = { day: null, time: null };
         userDays[subj.id].time = timeSelect.value;
-        markDirty();
+        autoSave();
       };
 
       const weekdayContainer = el('div', { className: 'weekday-chooser' });
@@ -969,14 +1276,13 @@ function startWeekge() {
         dayBtn.onclick = () => {
           if (!userDays[subj.id]) userDays[subj.id] = { day: null, time: null };
           
-          // Toggle behavior
           if (userDays[subj.id].day === day) {
             userDays[subj.id].day = null; // Deselect
           } else {
             userDays[subj.id].day = day; // Select
           }
           
-          markDirty();
+          autoSave();
           renderSettingsPage(); // Re-render to show active state change
         };
         weekdayContainer.append(dayBtn);
@@ -988,74 +1294,22 @@ function startWeekge() {
       removeBtn.onclick = () => {
         selected = selected.filter(id => id !== subj.id);
         delete userDays[subj.id];
-        markDirty();
+        // mySubjectsPageIndex will be auto-clamped on re-render
+        autoSave();
         renderSettingsPage();
       };
 
-      const item = el('div', { className: 'settings-item', style: 'position: relative; padding-right: 46px;' }, [
-        el('div', { className: 'name', textContent: subj.name, style: 'width: 100%; margin-bottom: 5px;' }),
-        timeSelect,
+      const controls = el('div', { style: 'display: flex; flex-direction: column; gap: 10px; flex-grow: 1;'}, [
+        el('h3', { className: 'widget-title', textContent: subj.name, style: 'font-size: 1.1rem; margin-bottom: 5px;' }),
         weekdayContainer,
-        removeBtn,
+        timeSelect
       ]);
-      mySubjectsContent.append(item);
-    });
 
-    const saveButton = el('button', { 
-        className: 'save-button', 
-        textContent: 'ცვლილებების დამახსოვრება',
-        style: 'margin-top: auto; padding-top: 10px;'
-    });
-    saveButton.onclick = saveSettings;
-
-    const mySubjectsCard = el('div', { id: 'my-subjects-widget', className: 'widget-card' }, [
-      el('h3', { className: 'widget-title', textContent: 'ჩემი საგნები' }),
-      mySubjectsContent,
-      saveButton
-    ]);
-
-    // -- Subjects Catalog Widget --
-    const catalogContent = el('div', { className: 'settings-widget-content' });
-    const sortedCatalog = [...catalog].sort((a, b) => a.name.localeCompare(b.name));
-
-    sortedCatalog.forEach(subj => {
-      if (selected.includes(subj.id)) return; // Don't show already added subjects
-
-      const addBtn = el('button', { className: 'action-btn' }, [
-        el('span', { className: 'material-symbols-outlined', textContent: 'add' })
+      // This is now an item within a widget, not a full widget-card itself.
+      return el('div', { className: 'settings-item', style: 'align-items: flex-start; padding: 15px; background: rgba(255,255,255,0.03); border-radius: 12px; gap: 15px;' }, [
+          removeBtn,
+          controls,
       ]);
-      addBtn.onclick = () => {
-        selected.push(subj.id);
-        markDirty();
-        renderSettingsPage(); // Re-render to move subject to "My Subjects"
-      };
-
-      catalogContent.append(el('div', { className: 'settings-item' }, [
-        el('div', { className: 'name', textContent: subj.name }),
-        addBtn
-      ]));
-    });
-
-    const catalogCard = el('div', { className: 'widget-card' }, [
-      el('h3', { className: 'widget-title', textContent: 'საგნების კატალოგი' }),
-      catalogContent
-    ]);
-
-    subjectsContainer.append(mySubjectsCard, catalogCard);
-
-    // -- Lecture Duration Widget --
-    const durationCard = createDurationWidget();
-    sideContainer.append(durationCard);
-
-    // -- Theme Selector Widget --
-    const themeCard = createThemeWidget();
-    sideContainer.append(themeCard);
-
-    // -- Logout Widget --
-    const logoutCard = createLogoutWidget();
-    sideContainer.append(logoutCard);
-
-    grid.append(subjectsContainer, sideContainer);
   }
 
   function createDurationWidget() {
@@ -1073,12 +1327,12 @@ function startWeekge() {
 
     const updateDuration = () => {
       lectureDuration = `${hourSelect.value}:${minuteSelect.value}`;
-      markDirty();
+      autoSave();
     };
     hourSelect.onchange = updateDuration;
     minuteSelect.onchange = updateDuration;
 
-    const container = el('div', { style: 'display: flex; gap: 10px; margin-top: 10px;' }, [hourSelect, minuteSelect]);
+    const container = el('div', { className: 'duration-selector', style: 'display: flex; gap: 10px; margin-top: 10px;' }, [hourSelect, minuteSelect]);
     return el('div', { className: 'widget-card' }, [
       el('h3', { className: 'widget-title', textContent: 'ლექციის ხანგრძლივობა' }),
       container
@@ -1133,9 +1387,7 @@ function startWeekge() {
   }
 
   function markDirty() {
-    // In this new design, we can show a visual indicator or just save directly.
-    const saveBtn = $('.save-button');
-    if (saveBtn) saveBtn.style.backgroundColor = 'var(--accent-color)';
+    // This function is no longer needed with auto-save.
   }
 }
 </script>
