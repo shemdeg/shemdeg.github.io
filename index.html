@@ -242,10 +242,7 @@
     font-size: 0.9rem;
   }
 
-  /* === RESOURCES PAGE === */
-  #resources-view .widget-card {
-    /* Revert to default column layout by removing row-specific styles */
-  }
+  
   #resources-view .embed-links {
     margin-top: auto; /* Push links to the bottom */
     padding-top: 10px;
@@ -1072,12 +1069,26 @@ function startWeekge() {
         };
     }).filter(Boolean);
 
-    // Simple sort: upcoming first, then by day index
+    // Sort subjects: scheduled first, then by upcoming, day, time, and name.
     subjectsForWeek.sort((a, b) => {
+        const aScheduled = a.dayIndex > -1;
+        const bScheduled = b.dayIndex > -1;
+
+        if (aScheduled && !bScheduled) return -1;
+        if (!aScheduled && bScheduled) return 1;
+        if (!aScheduled && !bScheduled) return a.name.localeCompare(b.name);
+
+        // Both are scheduled
         const isAUpcoming = a.dayIndex >= todayDayIndex;
         const isBUpcoming = b.dayIndex >= todayDayIndex;
+
         if (isAUpcoming !== isBUpcoming) return isAUpcoming ? -1 : 1;
-        return a.dayIndex - b.dayIndex;
+
+        if (a.dayIndex !== b.dayIndex) return a.dayIndex - b.dayIndex;
+
+        if (a.time && b.time) return a.time.localeCompare(b.time);
+        
+        return a.name.localeCompare(b.name); // final fallback
     });
 
     if (subjectsForWeek.length === 0) {
@@ -1113,12 +1124,43 @@ function startWeekge() {
     const grid = $('#resources-grid');
     grid.innerHTML = '';
 
-    const subjectsWithGlobalButtons = selected
-        .map(id => cache[id])
-        .filter(subj => subj && subj.globalButtons && subj.globalButtons.length > 0);
+    const todayDayIndex = new Date().getDay() === 0 ? 6 : new Date().getDay() - 1;
 
-    // Sort subjects alphabetically for consistent order
-    subjectsWithGlobalButtons.sort((a, b) => a.name.localeCompare(b.name, 'ka'));
+    const subjectsWithGlobalButtons = selected.map(id => {
+        const subj = cache[id];
+        if (!subj || !subj.globalButtons || subj.globalButtons.length === 0) return null;
+
+        const dayData = userDays?.[id] ?? { day: null, time: null };
+
+        return {
+            ...subj,
+            dayIndex: daysOfWeek.indexOf(dayData.day),
+            time: dayData.time,
+            isScheduled: dayData.day !== null
+        };
+    }).filter(Boolean);
+
+    // Sort subjects: scheduled first, then by upcoming, day, time, and name.
+    subjectsWithGlobalButtons.sort((a, b) => {
+        const aScheduled = a.dayIndex > -1;
+        const bScheduled = b.dayIndex > -1;
+
+        if (aScheduled && !bScheduled) return -1;
+        if (!aScheduled && bScheduled) return 1;
+        if (!aScheduled && !bScheduled) return a.name.localeCompare(b.name);
+
+        // Both are scheduled
+        const isAUpcoming = a.dayIndex >= todayDayIndex;
+        const isBUpcoming = b.dayIndex >= todayDayIndex;
+
+        if (isAUpcoming !== isBUpcoming) return isAUpcoming ? -1 : 1;
+
+        if (a.dayIndex !== b.dayIndex) return a.dayIndex - b.dayIndex;
+
+        if (a.time && b.time) return a.time.localeCompare(b.time);
+        
+        return a.name.localeCompare(b.name); // final fallback
+    });
 
     if (subjectsWithGlobalButtons.length === 0) {
         grid.append(el('p', {className: 'empty-placeholder', textContent: 'არჩეულ საგნებს არ აქვს გლობალური რესურსები.'}));
