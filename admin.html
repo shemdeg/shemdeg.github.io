@@ -80,17 +80,17 @@ header button:hover{background-color: var(--accent);}
 #saveStatus.saved{color:var(--success);}
 #saveStatus.error{color:var(--danger);}
 
-/* Layout (dual scroll) */
-main{display:grid;grid-template-columns:320px 1fr;height:calc(100vh - 60px);}
-aside{background:#131313;border-right:1px solid #0006;display:flex;flex-direction:column;}
-#sidebarScroll{flex:1;overflow-y:auto;padding:10px;}
-section{overflow-y:auto;height:100%;padding:50px;}
+/* Layout (3-panel) */
+main{display:grid;grid-template-columns:320px 240px 1fr;height:calc(100vh - 64px);}
+.panel{background:#131313;border-right:1px solid #0006;display:flex;flex-direction:column;overflow:hidden;}
+.panel-content{flex:1;overflow-y:auto;padding:10px;}
+#editorPanel{overflow-y:auto;height:100%;padding:20px 50px;}
 
-/* Sidebar */
+/* Panel 1: Subjects */
 .search{width:100%;padding:10px;border:none;background:var(--surface);color:#fff;margin-bottom:10px;}
 .subject-item{user-select: none;padding:10px;background:#ffffff18;border:1px solid #0006;margin-bottom:8px;cursor:pointer;font-weight:600; transition: ease-out 0.1s;}
 .subject-item:hover{background:#ffffff22;}
-.subject-item.active{background:#ffffff30;color:#ffffff;}
+.subject-item.active{background:var(--accent);color:#fff;}
 .subject-symbol-square {
   width: 30px;
   height: 30px;
@@ -101,21 +101,32 @@ section{overflow-y:auto;height:100%;padding:50px;}
   background-color: var(--field);
   margin-right: 8px;
   vertical-align: middle;
-  font-size: 1.2em; /* Adjust symbol size within the square */
+  font-size: 1.2em;
 }
-.btn-row{display:flex;gap:10px;margin-top:10px;padding:30px;}
+.btn-row{display:flex;gap:10px;margin-top:auto;padding:10px;}
 .btn-row button{flex:1;padding:10px;background:var(--accent);color:#ffffff;border:none;cursor:pointer;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px;}
 .btn-row button img{width:20px;height:20px}
+
+/* Panel 2: Weeks */
+#weeksPanel { background: #181818; }
+.week-item {
+    padding: 12px 16px;
+    font-weight: 600;
+    cursor: pointer;
+    border-bottom: 1px solid #222;
+    transition: background .15s ease;
+}
+.week-item:hover { background: #ffffff18; }
+.week-item.active { background: var(--accent); color: #fff; }
+.week-item.global { font-weight: 700; color: var(--success); }
 
 .btnLabel{margin: 0;}
 .btnLink{margin: 0;}
 
-
-/* Editor */
-#editor{transition:opacity .1s ease, filter .1s ease;}
-#editor.fadeout{opacity:0;filter:blur(4px);}
-#editor h2{font-size:1.2rem;margin-bottom:10px;color:var(--accent);}
-label{display:block;font-weight:700;margin:0;}
+/* Panel 3: Editor */
+#editor.fadeout{opacity:0;filter:blur(4px);transition:opacity .1s ease, filter .1s ease;}
+#editor h2{font-size:1.5rem;margin-bottom:16px;color:var(--accent);}
+label{display:block;font-weight:700;margin:16px 0 4px;}
 input,select{width:100%;padding:10px;border:none;background:var(--field);color:var(--buttontext);font-size:1rem;margin-bottom:10px;}
 .symbol-selector {
   display: flex;
@@ -124,34 +135,28 @@ input,select{width:100%;padding:10px;border:none;background:var(--field);color:v
   margin-bottom: 0;
 }
 #subjectSymbolDisplay {
-  width: 60px; /* Approximately 1x1 square visually */
+  width: 60px;
   height: 60px;
   display: flex;
   align-items: center;
   justify-content: center;
   border: 1px solid var(--field);
-  font-size: 2.2rem; /* Adjust as needed for visibility */
+  font-size: 2.2rem;
   background-color: var(--field);
   color: var(--buttontext);
   user-select: none;
 }
 
 .material-symbols-outlined {
-  font-variation-settings:
-      'FILL' 0,
-      'wght' 300,
-      'GRAD' 0,
-      'opsz' 48
+  font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 48;
 }
 
 #subjectSymbolName{height: 60px;margin-top: 10px;font-size: 1.4rem;}
-
 
 .week{border:1px solid #0006;background:#141414;padding:18px;margin-bottom:44px;}
 .week h3{margin-bottom:1rem;color:var(--accent);font-size: 1.5rem;}
 .addBtn{transition: 0.2s ease;font-size: 1rem;background:var(--accent);color:var(--buttontext);border:none;padding:10px 20px;cursor:pointer;margin-top:8px;display:inline-flex;align-items:center;gap:6px;}
 .addBtn:hover{background-color: #14862d;}
-
 
 .success{background:var(--success);color:var(--buttontext)}
 .danger{background:var(--danger);color:var(--buttontext);padding: 20px 0;}
@@ -181,7 +186,6 @@ input,select{width:100%;padding:10px;border:none;background:var(--field);color:v
 .popup-actions button{padding:10px;border:none;font-weight:800;cursor:pointer}
 .createBtn{background:var(--accent);color:#ffffff}
 .cancelBtn{background:#333;color:#fff}
-
 
 .removeBtn {
   background: #e61717;
@@ -246,7 +250,6 @@ input,select{width:100%;padding:10px;border:none;background:var(--field);color:v
 
 #logoutBtn{background-color: #383838;transition: 0.1 ease;user-select: none;}
 #logoutBtn:hover{transform: scale(1.02);}
-
 
 #applyNavBtn{background-color: #47da1a;transition: 0.1 ease;user-select: none;}
 #applyNavBtn:hover{transform: scale(1.02);}
@@ -348,11 +351,25 @@ input,select{width:100%;padding:10px;border:none;background:var(--field);color:v
   font-size: 18px;
 }
 
+.template-btn {
+    flex: 1;
+    padding: 10px;
+    background: #3a3a3a;
+    color: #fff;
+    border: 1px solid #555;
+    cursor: pointer;
+    font-weight: 600;
+    transition: background .2s ease;
+}
+.template-btn:hover {
+    background: #4a4a4a;
+}
 /* Mobile */
 @media(max-width:900px){
   main{grid-template-columns:1fr}
-  aside{order:2}
-  section{order:1;padding:18px}
+  #subjectsPanel{order:2}
+  #weeksPanel{order:3}
+  #editorPanel{order:1;padding:18px}
   .customBtnRow{flex-wrap: wrap;}
   .colorPalette{grid-column:1 / -1}
 }
@@ -400,8 +417,8 @@ input,select{width:100%;padding:10px;border:none;background:var(--field);color:v
 </header>
 
 <main>
-  <aside>
-    <div id="sidebarScroll">
+  <aside id="subjectsPanel" class="panel">
+    <div class="panel-content">
       <input type="search" id="searchBox" class="search" placeholder="მოძებნა">
       <div id="subjectList"></div>
     </div>
@@ -412,65 +429,13 @@ input,select{width:100%;padding:10px;border:none;background:var(--field);color:v
     </div>
   </aside>
 
-  <section>
+  <aside id="weeksPanel" class="panel" style="display:none;">
+    <div id="weeksList" class="panel-content" style="padding:0;"></div>
+  </aside>
+
+  <section id="editorPanel">
     <h2 id="editorTitle">აირჩიე საგანი გადასაკეთებლად</h2>
-    <div id="editor" style="display:none;">
-      <label>საგნის ID</label>
-      <input id="subjectId" disabled>
-      <label>საგნის სახელი</label>
-      <input id="subjectName">
-      <label style="margin-top:18px;">საგნის სურათი</label>
-      <div id="imageUploadContainer" class="image-upload-container">
-        <input type="file" id="imageInput" accept="image/*" style="display: none;">
-        <div class="drop-zone" id="dropZone">
-          <p>გადმოათრიე სურათი აქ ან <span class="click-to-upload">დააჭირე ასატვირთად</span></p>
-        </div>
-        <div class="image-preview" id="imagePreview" style="display: none;">
-          <img id="uploadedImage" src="" alt="Uploaded Image">
-          <button class="delete-image-btn" id="deleteImageBtn">
-            <span class="material-symbols-outlined">close</span>
-          </button>
-        </div>
-      </div>
-      <label>საგნის სიმბოლო</label>
-      <div class="symbol-selector">
-        <span class="material-symbols-outlined" id="subjectSymbolDisplay"></span>
-        <input type="text" id="subjectSymbolName" placeholder="სიმბოლოს სახელი (მაგ: home)">
-      </div>
-
-
-      <div class="global">
-        <h3>ზოგადი რესურსები</h3>
-        <div id="globalBtns"></div>
-        <div class="weekBtns" id="globalWeekBtns" style="display:flex;gap:8px;flex-wrap:wrap;">
-          <button class="addBtn slideBtn" data-global="true" style="background-color:#e8980e;">
-            <img src="https://github.com/WEEKGE/weeksy-assets00002222/raw/refs/heads/main/svgs/add.svg" width="18" height="18" alt="">სლაიდის დამატება
-          </button>
-          <button class="addBtn videoBtn" data-global="true" style="background-color:#eb1515;">
-            <img src="https://github.com/WEEKGE/weeksy-assets00002222/raw/refs/heads/main/svgs/add.svg" width="18" height="18" alt="">ვიდეოს დამატება
-          </button>
-          <button class="addBtn bookBtn" data-global="true" style="background-color:#0e86e8;">
-            <img src="https://github.com/WEEKGE/weeksy-assets00002222/raw/refs/heads/main/svgs/add.svg" width="18" height="18" alt="">წიგნის დამატება
-          </button>
-          <button class="addBtn addCustom" data-global="true" style="background-color:#323742;">
-            <img src="https://github.com/WEEKGE/weeksy-assets00002222/raw/refs/heads/main/svgs/add.svg" width="18" height="18" alt="">სხვა რესურსის დამატება
-          </button>
-        </div>
-      </div>
-
-      <div id="weeksContainer"></div>
-
-      <!-- Optional local buttons kept (but not autosaving) -->
-      <div class="btn-row" style="padding:0">
-        <button class="success" id="saveBtn">
-          <img src="https://github.com/WEEKGE/weeksy-assets00002222/raw/refs/heads/main/svgs/check.svg" alt="" width="18" height="18">Apply
-        </button>
-        <button class="danger" id="deleteBtn">
-          <img src="https://github.com/WEEKGE/weeksy-assets00002222/raw/refs/heads/main/svgs/delete.svg" alt="" width="18" height="18">Delete
-        </button>
-      </div>
-      <div class="status" id="status"></div>
-    </div>
+    <div id="editor"></div>
   </section>
 </main>
 
@@ -509,15 +474,15 @@ fetch("https://raw.githubusercontent.com/WEEKGE/live/main/config.json")
 
 function startAdmin(){
   const auth = firebase.auth(), db = firebase.firestore();
-  let user = null, subjects = [], currentId = null;
-  let isDirty = false; // <- აუტოსეივის ნაცვლად ცვლილების მონიტორი
+  let user = null, subjects = [], currentSubjectData = null, currentId = null, currentWeek = null;
+  let isDirty = false;
 
   const ADMIN_EMAILS = ["davit.gvakharia@gmail.com"];
   const $ = s => document.querySelector(s);
   const el = (t, p = {}, kids = []) => { const e = document.createElement(t); Object.assign(e, p); kids.forEach(k => e.append(k)); return e; };
 
   const saveStatus = $("#saveStatus");
-  const statusBox = $("#status");
+  const editorContainer = $("#editor");
 
   const setSaveState = (state, msg) => {
     saveStatus.className = "";
@@ -537,7 +502,6 @@ function startAdmin(){
     }else{
       if(msg) saveStatus.textContent = msg;
     }
-    if(msg && statusBox){ statusBox.textContent = msg; }
   };
 
   const markDirty = () => {
@@ -545,147 +509,119 @@ function startAdmin(){
     setSaveState("dirty");
   };
 
-  // Image Upload Functionality
-  const imageUploadContainer = $("#imageUploadContainer");
-  const imageInput = $("#imageInput");
-  const dropZone = $("#dropZone");
-  const imagePreview = $("#imagePreview");
-  const uploadedImage = $("#uploadedImage");
-  const deleteImageBtn = $("#deleteImageBtn");
+  // Image Upload Functionality (scoped within createButtonEditor)
+  let currentImageUrl = "";
 
-  let currentImageUrl = ""; // To store the image URL for the current subject
+  function setupImageUpload(container) {
+      const imageUploadContainer = container.querySelector(".image-upload-container");
+      if (!imageUploadContainer) return;
 
-  function displayImage(file) {
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        uploadedImage.src = e.target.result;
-        imagePreview.style.display = "flex";
-        dropZone.style.display = "none";
-        currentImageUrl = e.target.result; // Store the base64 or URL
-        markDirty();
-      };
-      reader.readAsDataURL(file);
-    }
-  }
+      const imageInput = imageUploadContainer.querySelector("input[type=file]");
+      const dropZone = imageUploadContainer.querySelector(".drop-zone");
+      const imagePreview = imageUploadContainer.querySelector(".image-preview");
+      const uploadedImage = imageUploadContainer.querySelector(".uploaded-image");
+      const deleteImageBtn = imageUploadContainer.querySelector(".delete-image-btn");
 
-  function clearImage() {
-    uploadedImage.src = "";
-    imagePreview.style.display = "none";
-    dropZone.style.display = "flex";
-    currentImageUrl = "";
-    markDirty();
-  }
+      function displayImage(file) {
+          if (file) {
+              const reader = new FileReader();
+              reader.onload = (e) => {
+                  uploadedImage.src = e.target.result;
+                  imagePreview.style.display = "flex";
+                  dropZone.style.display = "none";
+                  currentImageUrl = e.target.result;
+                  markDirty();
+              };
+              reader.readAsDataURL(file);
+          }
+      }
 
-  function handleFile(file) {
-    if (file && file.type.startsWith("image/")) {
-      displayImage(file);
-    } else {
-      alert("Please upload an image file.");
-    }
-  }
+      function clearImage() {
+          uploadedImage.src = "";
+          imagePreview.style.display = "none";
+          dropZone.style.display = "flex";
+          currentImageUrl = "";
+          markDirty();
+      }
 
-  // Drag and Drop events
-  dropZone.addEventListener("dragover", (e) => {
-    e.preventDefault();
-    imageUploadContainer.classList.add("drag-over");
-  });
+      function handleFile(file) {
+          if (file && file.type.startsWith("image/")) {
+              displayImage(file);
+          } else {
+              alert("Please upload an image file.");
+          }
+      }
 
-  dropZone.addEventListener("dragleave", () => {
-    imageUploadContainer.classList.remove("drag-over");
-  });
+      dropZone.addEventListener("dragover", (e) => { e.preventDefault(); imageUploadContainer.classList.add("drag-over"); });
+      dropZone.addEventListener("dragleave", () => { imageUploadContainer.classList.remove("drag-over"); });
+      dropZone.addEventListener("drop", (e) => {
+          e.preventDefault();
+          imageUploadContainer.classList.remove("drag-over");
+          handleFile(e.dataTransfer.files[0]);
+      });
+      dropZone.addEventListener("click", () => imageInput.click());
+      imageInput.addEventListener("change", (e) => handleFile(e.target.files[0]));
+      deleteImageBtn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          if (confirm("Are you sure you want to delete this image?")) clearImage();
+      });
 
-  dropZone.addEventListener("drop", (e) => {
-    e.preventDefault();
-    imageUploadContainer.classList.remove("drag-over");
-    const file = e.dataTransfer.files[0];
-    handleFile(file);
-  });
-
-  // Click to upload
-  dropZone.addEventListener("click", () => {
-    imageInput.click();
-  });
-
-  imageInput.addEventListener("change", (e) => {
-    const file = e.target.files[0];
-    handleFile(file);
-  });
-
-  // Delete image button
-  deleteImageBtn.addEventListener("click", (e) => {
-    e.stopPropagation(); // Prevent triggering dropZone click
-    if (confirm("Are you sure you want to delete this image?")) {
-      clearImage();
-    }
-  });
-
-  function showToast(m, c = "#fff") {
-    if (statusBox) { statusBox.textContent = m; statusBox.style.color = c; }
+      // Initial state
+      if (currentSubjectData && currentSubjectData.imageUrl) {
+          uploadedImage.src = currentSubjectData.imageUrl;
+          imagePreview.style.display = "flex";
+          dropZone.style.display = "none";
+          currentImageUrl = currentSubjectData.imageUrl;
+      } else {
+          clearImage();
+      }
   }
 
   /* === Auth === */
-  $("#signinBtn").onclick = async () => {
+  $("#googleSignInBtn").onclick = async () => {
     const provider = new firebase.auth.GoogleAuthProvider();
-    overlay.querySelector("p").textContent = "ავტორიზაცია მიმდინარეობს...";
-    overlay.classList.remove("hidden");
-    try{ await auth.signInWithPopup(provider); }
-    catch(err){ console.error("Sign-in error:", err); alert("❌ შესვლისას შეცდომაა"); overlay.classList.add("hidden"); }
+    try { await auth.signInWithPopup(provider); } 
+    catch (err) { console.error("Sign-in error:", err); alert("Sign-in failed."); }
   };
 
-  $("#logoutBtn").onclick = async () => {
-    overlay.querySelector("p").textContent = "გასვლა...";
-    overlay.classList.remove("hidden");
-    try{ await auth.signOut(); }
-    catch(err){ console.error("Logout error:", err); alert("❌ გასვლისას შეცდომაა"); overlay.classList.add("hidden"); }
-  };
+  $("#logoutBtn").onclick = () => auth.signOut();
 
   auth.onAuthStateChanged(async u => {
     user = u || null;
     const signinOverlay = $("#signin-overlay");
     if(user){
-      if(signinOverlay) signinOverlay.style.display = "none";
+      signinOverlay.style.display = "none";
       $("#signinBtn").style.display = "none";
       $("#logoutBtn").style.display = "inline-flex";
 
       if(ADMIN_EMAILS.includes(user.email)){
-        await loadSubjects();
         overlay.querySelector("p").textContent = "იტვირთება...";
-        setTimeout(() => overlay.classList.add("hidden"), 600);
+        await loadSubjects();
+        setTimeout(() => overlay.classList.add("hidden"), 300);
       }else{
         overlay.innerHTML = "<div style='text-align: center;'><h1 style='color:red;'>🚫 Access Denied</h1><button id='accessDeniedLogoutBtn' style='background: #333; color: #fff; border: none; padding: 10px 20px; margin-top: 20px; cursor: pointer;'>Log Out</button></div>";
-        document.getElementById("accessDeniedLogoutBtn").onclick = () => auth.signOut();
+        $("#accessDeniedLogoutBtn").onclick = () => auth.signOut();
         overlay.classList.remove("hidden");
       }
     }else{
-      if(signinOverlay) signinOverlay.style.display = "flex";
+      signinOverlay.style.display = "flex";
       overlay.classList.add("hidden");
-      $("#signinBtn").style.display = "none";
+      $("#signinBtn").style.display = "none"; // Should be hidden anyway
       $("#logoutBtn").style.display = "none";
+      $("#weeksPanel").style.display = "none";
+      editorContainer.innerHTML = "";
+      $("#editorTitle").textContent = "აირჩიე საგანი გადასაკეთებლად";
     }
   });
-
-  const googleSignInBtn = $("#googleSignInBtn");
-  if(googleSignInBtn) {
-    googleSignInBtn.onclick = async () => {
-        const provider = new firebase.auth.GoogleAuthProvider();
-        try {
-            await auth.signInWithPopup(provider);
-        } catch (err) {
-            console.error("Sign-in error:", err);
-            alert("Sign-in failed. Please try again.");
-        }
-    };
-  }
 
   /* === Subjects === */
   async function loadSubjects(){
     const snap = await db.collection("subjects").get();
     subjects = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    renderList();
+    renderSubjectList();
   }
 
-  function renderList(){
+  function renderSubjectList(){
     const list = $("#subjectList"); 
     list.innerHTML = "";
     const q = $("#searchBox").value.toLowerCase();
@@ -693,20 +629,15 @@ function startAdmin(){
       .filter(s => (s.name||"").toLowerCase().includes(q) || (s.id||"").toLowerCase().includes(q))
       .forEach(s => {
         const div = el("div",{ className:"subject-item" });
-
         const symbolSquare = el("span", { className: "subject-symbol-square material-symbols-outlined", textContent: s.theme || "" });
-        if (!s.theme) {
-          symbolSquare.style.visibility = "hidden"; // Hide if no symbol
-        }
-        div.append(symbolSquare);
-        
-        div.append(`${s.name} (${s.id})`);
+        if (!s.theme) symbolSquare.style.visibility = "hidden";
+        div.append(symbolSquare, `${s.name} (${s.id})`);
         div.onclick = () => openSubject(s.id);
         if(s.id === currentId) div.classList.add("active");
         list.append(div);
       });
   }
-  $("#searchBox").oninput = renderList;
+  $("#searchBox").oninput = renderSubjectList;
 
   /* === Popup create === */
   const popup = $("#addPopup");
@@ -724,8 +655,7 @@ function startAdmin(){
     const name = $("#popupName").value.trim();
     const id = $("#popupId").value.trim();
     if(!name || !id){ alert("შეიყვანე ორივე ველი: სახელი და ID"); return; }
-    const valid = /^[a-z0-9\-_\.]+$/i.test(id);
-    if(!valid){ alert("ID უნდა შეიცავდეს მხოლოდ ასოებს, ციფრებს, '-', '_' ან '.'"); return; }
+    if(!/^[a-z0-9\-_\.]+$/i.test(id)){ alert("ID უნდა შეიცავდეს მხოლოდ ასოებს, ციფრებს, '-', '_' ან '.'"); return; }
     const doc = await db.collection("subjects").doc(id).get();
     if(doc.exists){ alert("აიდი დაკავებულია. აირჩიე სხვა ID."); return; }
 
@@ -734,67 +664,74 @@ function startAdmin(){
     popup.classList.remove("active");
     await loadSubjects();
     openSubject(id);
-    showToast("✅ Subject created","#38d98a");
   }
 
   function fadeEditor(cb){
-    const ed = $("#editor");
-    ed.classList.add("fadeout");
-    setTimeout(() => { cb(); ed.classList.remove("fadeout"); }, 120);
+    editorContainer.classList.add("fadeout");
+    setTimeout(() => { cb(); editorContainer.classList.remove("fadeout"); }, 120);
   }
 
   async function openSubject(id){
     const doc = await db.collection("subjects").doc(id).get();
     if(!doc.exists){ alert("Not found"); return; }
-    const data = doc.data();
+    
     currentId = id;
+    currentSubjectData = doc.data();
     isDirty = false;
     setSaveState("saved");
 
-    document.querySelectorAll(".subject-item").forEach(x => 
-      x.classList.toggle("active", x.textContent.endsWith(`(${id})`))
-    );
+    renderSubjectList(); // To update active class
 
-    $("#editor").style.display = "block";
-    fadeEditor(() => {
-      $("#editorTitle").textContent = `Editing: ${data.name}`;
-      $("#subjectId").value = id;
-      $("#subjectName").value = data.name || "";
-      const symbol = data.theme || ""; // Repurpose 'theme' for symbol name
-      $("#subjectSymbolName").value = symbol;
-      const symbolDisplay = $("#subjectSymbolDisplay");
-      symbolDisplay.textContent = symbol;
-      if (symbol) {
-        symbolDisplay.classList.add("material-symbols-outlined");
-      } else {
-        symbolDisplay.classList.remove("material-symbols-outlined");
-      }
-
-      // New: Handle subject image
-      if (data.imageUrl) {
-        uploadedImage.src = data.imageUrl;
-        imagePreview.style.display = "flex";
-        dropZone.style.display = "none";
-        currentImageUrl = data.imageUrl;
-      } else {
-        clearImage(); // Ensure no old image is displayed
-      }
-
-      renderGlobal(data.globalButtons || []);
-      renderWeeks(data.weeks || []);
-    });
+    $("#weeksPanel").style.display = "flex";
+    $("#editorTitle").textContent = `Editing: ${currentSubjectData.name}`;
+    renderWeeksList();
+    openWeek('global'); // Default to global settings
   }
 
-  function updateAddButtonsVisibilityGlobal(){
-    const globalWeekBtnsContainer = document.querySelector(`#globalWeekBtns`);
-    const globalBox = document.querySelector(`#globalBtns`);
-    
-    const slideBtn = globalWeekBtnsContainer.querySelector('.slideBtn');
-    const videoBtn = globalWeekBtnsContainer.querySelector('.videoBtn');
-    const bookBtn = globalWeekBtnsContainer.querySelector('.bookBtn');
-    const customBtn = globalWeekBtnsContainer.querySelector('.addCustom');
+  function renderWeeksList() {
+      const list = $("#weeksList");
+      list.innerHTML = "";
 
-    const buttons = [...globalBox.querySelectorAll(".customBtnRow")];
+      const globalItem = el("div", { className: "week-item global", textContent: "Global Settings" });
+      globalItem.dataset.week = "global";
+      globalItem.onclick = () => openWeek('global');
+      list.append(globalItem);
+
+      for (let i = 1; i <= 13; i++) {
+          const item = el("div", { className: "week-item", textContent: `კვირა ${i}` });
+          item.dataset.week = i;
+          item.onclick = () => openWeek(i);
+          list.append(item);
+      }
+  }
+
+  function openWeek(weekId) {
+      currentWeek = weekId;
+      document.querySelectorAll("#weeksList .week-item").forEach(item => {
+          item.classList.toggle("active", String(item.dataset.week) === String(weekId));
+      });
+
+      fadeEditor(() => {
+          if (weekId === 'global') {
+              renderGlobalEditor();
+          } else {
+              renderWeekEditor(weekId);
+          }
+      });
+  }
+
+  function updateAddButtonsVisibility(container, isGlobal = false) {
+    const btnsContainer = isGlobal ? container.querySelector('#globalWeekBtns') : container.querySelector('.weekBtns');
+    const editorBox = isGlobal ? container.querySelector('#globalBtns') : container.querySelector('.buttons-box');
+
+    if (!btnsContainer || !editorBox) return;
+
+    const slideBtn = btnsContainer.querySelector('.slideBtn');
+    const videoBtn = btnsContainer.querySelector('.videoBtn');
+    const bookBtn = btnsContainer.querySelector('.bookBtn');
+    const customBtn = btnsContainer.querySelector('.addCustom');
+
+    const buttons = [...editorBox.querySelectorAll(".customBtnRow")];
     const hasSlide = buttons.some(row => row.dataset.type === 'slide');
     const hasVideo = buttons.some(row => row.dataset.type === 'video');
     const hasBook = buttons.some(row => row.dataset.type === 'book');
@@ -810,13 +747,13 @@ function startAdmin(){
 
   const COLOR_NAMES = ["yellow","red","blue","green"];
 
-function createButtonEditor(b, weekIndex = null, isGlobal = false){
+  function createButtonEditor(b, container, isGlobal = false, weekIndex = null){
     const wrap = el("div",{className:"customBtnRow"});
     const selected = b.colorName || "yellow";
     const isEmbed = ['slide', 'video', 'book'].includes(b.type);
 
     wrap.dataset.type = b.type;
-    wrap.dataset.colorName = selected; // Still store it, even if not shown
+    wrap.dataset.colorName = selected;
 
     const labelField = isEmbed 
         ? `<input class="btnLabel" type="text" value="${b.label||""}" readonly style="background:#222; cursor: default;">`
@@ -855,221 +792,253 @@ function createButtonEditor(b, weekIndex = null, isGlobal = false){
 
     wrap.querySelector(".removeBtn").onclick = () => { 
         wrap.remove(); 
-        if (isGlobal) {
-            updateAddButtonsVisibilityGlobal();
-        } else if (weekIndex !== null) {
-            updateAddButtonsVisibility(weekIndex);
-        }
+        updateAddButtonsVisibility(container, isGlobal);
         markDirty(); 
     };
     return wrap;
   }
 
-  function renderGlobal(btns){
-    const box = $("#globalBtns"); box.innerHTML = "";
-    btns.forEach(b => box.append(createButtonEditor({ ...b, type: b.type || 'custom' }, null, true)));
-    new Sortable(box, {
-        animation: 150,
-        handle: '.drag-handle',
-        onEnd: () => markDirty()
-    });
+  function renderGlobalEditor() {
+      editorContainer.innerHTML = `
+        <h2>Global Settings</h2>
+        <label>საგნის ID</label>
+        <input id="subjectId" disabled>
+        <label>საგნის სახელი</label>
+        <input id="subjectName">
+        <label>საგნის სურათი</label>
+        <div class="image-upload-container">
+            <input type="file" accept="image/*" style="display: none;">
+            <div class="drop-zone"><p>გადმოათრიე სურათი აქ ან <span class="click-to-upload">დააჭირე ასატვირთად</span></p></div>
+            <div class="image-preview" style="display: none;">
+                <img class="uploaded-image" src="" alt="Uploaded Image">
+                <button class="delete-image-btn"><span class="material-symbols-outlined">close</span></button>
+            </div>
+        </div>
+        <label>საგნის სიმბოლო</label>
+        <div class="symbol-selector">
+            <span class="material-symbols-outlined" id="subjectSymbolDisplay"></span>
+            <input type="text" id="subjectSymbolName" placeholder="სიმბოლოს სახელი (მაგ: home)">
+        </div>
 
-    const globalWeekBtnsContainer = $("#globalWeekBtns");
+        <label style="margin-top: 20px;">ლექციის ტიპის შაბლონები</label>
+        <div id="lectureTypeTemplates" style="display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap;">
+            <button class="template-btn" data-template="1" title="Week 1: Lecture, Week 7: Midterm, Others: Lecture (Quiz)">ლექცია, სულ ქვიზები, შუაში შუალედური</button>
+            <button class="template-btn" data-template="2" title="Week 1: Lecture, Others: Lecture (Quiz)">ლექცია,სულ ქვიზები, შუალედურის გარეშე</button>
+            <button class="template-btn" data-template="3" title="Odd: Lecture, Even: Lecture (Quiz), Week 13: Presentation">ლექცია, შუალედური და პრეზენტაცია</button>
+        </div>
 
-    const checkEmbedLimitGlobal = () => {
-      const embedCount = [...box.querySelectorAll(".customBtnRow")].filter(row => row.dataset.type !== 'custom').length;
-      if (embedCount >= 3) {
-          alert("You can add a maximum of 3 embeds (slides, videos, or books) globally.");
-          return false;
-      }
-      return true;
-    };
-
-    globalWeekBtnsContainer.querySelector(".slideBtn").onclick = () => {
-      if (!checkEmbedLimitGlobal()) return;
-      const exists = [...box.querySelectorAll(".customBtnRow")].some(row => row.dataset.type === 'slide');
-      if(!exists){
-        box.append(createButtonEditor({type: 'slide', label:"სლაიდი", link:"DRIVELINK/preview", colorName:"yellow"}, null, true));
-        updateAddButtonsVisibilityGlobal();
-        markDirty();
-      }
-    };
-    globalWeekBtnsContainer.querySelector(".videoBtn").onclick = () => {
-      if (!checkEmbedLimitGlobal()) return;
-      const exists = [...box.querySelectorAll(".customBtnRow")].some(row => row.dataset.type === 'video');
-      if(!exists){
-        box.append(createButtonEditor({type: 'video', label:"ვიდეო", link:"", colorName:"red"}, null, true));
-        updateAddButtonsVisibilityGlobal();
-        markDirty();
-      }
-    };
-    globalWeekBtnsContainer.querySelector(".bookBtn").onclick = () => {
-      if (!checkEmbedLimitGlobal()) return;
-      const exists = [...box.querySelectorAll(".customBtnRow")].some(row => row.dataset.type === 'book');
-      if(!exists){
-        box.append(createButtonEditor({type: 'book', label:"წიგნი", link:"", colorName:"blue"}, null, true));
-        updateAddButtonsVisibilityGlobal();
-        markDirty();
-      }
-    };
-    globalWeekBtnsContainer.querySelector(".addCustom").onclick = () => {
-      box.append(createButtonEditor({type: 'custom', label:"", link:"", colorName:"green"}, null, true));
-      markDirty();
-    };
-
-    updateAddButtonsVisibilityGlobal();
-  }
-
-  function renderWeeks(weeks){
-    const box = $("#weeksContainer"); box.innerHTML = "";
-    for(let i=1;i<=13;i++){ // 12 კვირა
-      const w = weeks.find(x=>x.week===i)||{};
-      const div = el("div",{className:"week"});
-      div.innerHTML = `
-        <h3>კვირა ${i}</h3>
-        <label>თემის სათაური</label>
-        <div id="topic-${i}" class="topicField" contenteditable="true">${w.topic || ""}</div>
-
-        <label style="margin-top:18px;">ლექციის ტიპი</label>
-        <select id="type-${i}" style="background:#23343B;color:var(--buttontext)">
-          <option value="ლექცია"${w.type==="ლექცია"?" selected":""}>ლექცია</option>
-          <option value="ლექცია (ქვიზი)"${w.type==="ლექცია (ქვიზი)"?" selected":""}>ლექცია (ქვიზი)</option>
-          <option value="შუალედური"${w.type==="შუალედური"?" selected":""}>შუალედური</option>
-          <option value="პრეზენტაცია"${w.type==="პრეზენტაცია"?" selected":""}>პრეზენტაცია</option>
-        </select>
-
-        <label style="margin-top:18px;">ბმულები</label>
-        <div id="buttons-${i}"></div>
-
-        <div class="weekBtns" id="weekBtns-${i}" style="display:flex;gap:8px;flex-wrap:wrap;">
-          <button class="addBtn slideBtn" data-week="${i}" style="background-color:#e8980e;">
-            <img src="https://github.com/WEEKGE/weeksy-assets00002222/raw/refs/heads/main/svgs/add.svg" width="18" height="18" alt="">სლაიდის დამატება
-          </button>
-          <button class="addBtn videoBtn" data-week="${i}" style="background-color:#eb1515;">
-            <img src="https://github.com/WEEKGE/weeksy-assets00002222/raw/refs/heads/main/svgs/add.svg" width="18" height="18" alt="">ვიდეოს დამატება
-          </button>
-          <button class="addBtn bookBtn" data-week="${i}" style="background-color:#0e86e8;">
-            <img src="https://github.com/WEEKGE/weeksy-assets00002222/raw/refs/heads/main/svgs/add.svg" width="18" height="18" alt="">წიგნის დამატება
-          </button>
-          <button class="addBtn addCustom" data-week="${i}" style="background-color:#323742;">
-            <img src="https://github.com/WEEKGE/weeksy-assets00002222/raw/refs/heads/main/svgs/add.svg" width="18" height="18" alt="">სხვა რესურსის დამატება
-          </button>
+        <div class="global">
+            <h3>ზოგადი რესურსები</h3>
+            <div id="globalBtns"></div>
+            <div class="weekBtns" id="globalWeekBtns" style="display:flex;gap:8px;flex-wrap:wrap;">
+                <button class="addBtn slideBtn" style="background-color:#e8980e;"><img src="https://github.com/WEEKGE/weeksy-assets00002222/raw/refs/heads/main/svgs/add.svg" width="18" height="18" alt="">სლაიდის დამატება</button>
+                <button class="addBtn videoBtn" style="background-color:#eb1515;"><img src="https://github.com/WEEKGE/weeksy-assets00002222/raw/refs/heads/main/svgs/add.svg" width="18" height="18" alt="">ვიდეოს დამატება</button>
+                <button class="addBtn bookBtn" style="background-color:#0e86e8;"><img src="https://github.com/WEEKGE/weeksy-assets00002222/raw/refs/heads/main/svgs/add.svg" width="18" height="18" alt="">წიგნის დამატება</button>
+                <button class="addBtn addCustom" style="background-color:#323742;"><img src="https://github.com/WEEKGE/weeksy-assets00002222/raw/refs/heads/main/svgs/add.svg" width="18" height="18" alt="">სხვა რესურსის დამატება</button>
+            </div>
         </div>
       `;
-      box.append(div);
 
-      const btnBox = div.querySelector(`#buttons-${i}`);
-      (w.buttons||[]).forEach(b => btnBox.append(createButtonEditor(b, i)));
-      new Sortable(btnBox, {
-        animation: 150,
-        handle: '.drag-handle',
-        onEnd: () => markDirty()
-      });
+      $("#subjectId").value = currentId;
+      $("#subjectName").value = currentSubjectData.name || "";
+      const symbol = currentSubjectData.theme || "";
+      $("#subjectSymbolName").value = symbol;
+      const symbolDisplay = $("#subjectSymbolDisplay");
+      symbolDisplay.textContent = symbol;
+      symbolDisplay.classList.toggle("material-symbols-outlined", !!symbol);
 
-      const topicField = div.querySelector(`#topic-${i}`);
-      topicField.addEventListener("input", markDirty);
+      setupImageUpload(editorContainer);
 
-      div.querySelector(`#type-${i}`).addEventListener("input", markDirty);
+      const box = $("#globalBtns");
+      (currentSubjectData.globalButtons || []).forEach(b => box.append(createButtonEditor(b, editorContainer, true)));
+      new Sortable(box, { animation: 150, handle: '.drag-handle', onEnd: markDirty });
 
       const checkEmbedLimit = () => {
-          const embedCount = [...btnBox.querySelectorAll(".customBtnRow")].filter(row => row.dataset.type !== 'custom').length;
-          if (embedCount >= 3) {
-              alert("You can add a maximum of 3 embeds (slides, videos, or books).");
-              return false;
-          }
+          const embedCount = [...box.querySelectorAll(".customBtnRow")].filter(row => row.dataset.type !== 'custom').length;
+          if (embedCount >= 3) { alert("You can add a maximum of 3 embeds globally."); return false; }
           return true;
       };
 
-      div.querySelector(".slideBtn").onclick = () => {
-        if (!checkEmbedLimit()) return;
-        const exists = [...btnBox.querySelectorAll(".customBtnRow")].some(row => row.dataset.type === 'slide');
-        if(!exists){
-          btnBox.append(createButtonEditor({type: 'slide', label:"სლაიდი", link:"DRIVELINK/preview", colorName:"yellow"}, i));
-          updateAddButtonsVisibility(i);
-          markDirty();
-        }
+      editorContainer.querySelector(".slideBtn").onclick = () => {
+          if (!checkEmbedLimit() || [...box.querySelectorAll(".customBtnRow")].some(r => r.dataset.type === 'slide')) return;
+          box.append(createButtonEditor({type: 'slide', label:"სლაიდი", link:"DRIVELINK/preview", colorName:"yellow"}, editorContainer, true));
+          updateAddButtonsVisibility(editorContainer, true); markDirty();
       };
-      div.querySelector(".videoBtn").onclick = () => {
-        if (!checkEmbedLimit()) return;
-        const exists = [...btnBox.querySelectorAll(".customBtnRow")].some(row => row.dataset.type === 'video');
-        if(!exists){
-          btnBox.append(createButtonEditor({type: 'video', label:"ვიდეო", link:"", colorName:"red"}, i));
-          updateAddButtonsVisibility(i);
-          markDirty();
-        }
+      editorContainer.querySelector(".videoBtn").onclick = () => {
+          if (!checkEmbedLimit() || [...box.querySelectorAll(".customBtnRow")].some(r => r.dataset.type === 'video')) return;
+          box.append(createButtonEditor({type: 'video', label:"ვიდეო", link:"", colorName:"red"}, editorContainer, true));
+          updateAddButtonsVisibility(editorContainer, true); markDirty();
       };
-      div.querySelector(".bookBtn").onclick = () => {
-        if (!checkEmbedLimit()) return;
-        const exists = [...btnBox.querySelectorAll(".customBtnRow")].some(row => row.dataset.type === 'book');
-        if(!exists){
-          btnBox.append(createButtonEditor({type: 'book', label:"წიგნი", link:"", colorName:"blue"}, i));
-          updateAddButtonsVisibility(i);
-          markDirty();
-        }
+      editorContainer.querySelector(".bookBtn").onclick = () => {
+          if (!checkEmbedLimit() || [...box.querySelectorAll(".customBtnRow")].some(r => r.dataset.type === 'book')) return;
+          box.append(createButtonEditor({type: 'book', label:"წიგნი", link:"", colorName:"blue"}, editorContainer, true));
+          updateAddButtonsVisibility(editorContainer, true); markDirty();
       };
-      div.querySelector(".addCustom").onclick = () => {
-        btnBox.append(createButtonEditor({type: 'custom', label:"", link:"", colorName:"green"}, i));
-        markDirty();
+      editorContainer.querySelector(".addCustom").onclick = () => {
+          box.append(createButtonEditor({type: 'custom', label:"", link:"", colorName:"green"}, editorContainer, true));
+          markDirty();
       };
 
-      updateAddButtonsVisibility(i);
-    }
+      updateAddButtonsVisibility(editorContainer, true);
+
+      // Event listeners for dirty marking
+      ["#subjectName", "#subjectSymbolName"].forEach(sel => {
+          $(sel).addEventListener("input", (e) => {
+              markDirty();
+              if (sel === "#subjectSymbolName") {
+                  symbolDisplay.textContent = e.target.value;
+                  symbolDisplay.classList.toggle("material-symbols-outlined", !!e.target.value);
+              }
+          });
+      });
+
+      // Lecture Type Template Logic
+      editorContainer.querySelectorAll(".template-btn").forEach(btn => {
+          btn.onclick = () => {
+              if (!confirm("Are you sure you want to apply this template? This will overwrite all existing week types for this subject.")) {
+                  return;
+              }
+
+              const template = btn.dataset.template;
+              
+              for (let i = 1; i <= 13; i++) {
+                  let weekData = currentSubjectData.weeks.find(w => w.week === i);
+                  if (!weekData) {
+                      weekData = { week: i, topic: "", buttons: [] };
+                      currentSubjectData.weeks.push(weekData);
+                  }
+
+                  if (template === "1") {
+                      if (i === 1) weekData.type = "ლექცია";
+                      else if (i === 7) weekData.type = "შუალედური";
+                      else weekData.type = "ლექცია (ქვიზი)";
+                  } else if (template === "2") {
+                      if (i === 1) weekData.type = "ლექცია";
+                      else weekData.type = "ლექცია (ქვიზი)";
+                  } else if (template === "3") {
+                      if (i === 13) weekData.type = "პრეზენტაცია";
+                      else if (i % 2 !== 0) weekData.type = "ლექცია"; // Odd
+                      else weekData.type = "ლექცია (ქვიზი)"; // Even
+                  }
+              }
+
+              // Sort weeks array just in case new weeks were added out of order
+              currentSubjectData.weeks.sort((a, b) => a.week - b.week);
+
+              markDirty();
+              alert("Template applied! Don't forget to click 'Apply' to save the changes.");
+
+              // If a week editor is currently open, refresh it to show the new type
+              if (currentWeek !== 'global') {
+                  const weekNumToRefresh = currentWeek;
+                  openWeek(weekNumToRefresh);
+              }
+          };
+      });
   }
 
-  function updateAddButtonsVisibility(i){
-    const weekBtnsContainer = document.querySelector(`#weekBtns-${i}`);
-    const weekBox = document.querySelector(`#buttons-${i}`);
-    
-    const slideBtn = weekBtnsContainer.querySelector('.slideBtn');
-    const videoBtn = weekBtnsContainer.querySelector('.videoBtn');
-    const bookBtn = weekBtnsContainer.querySelector('.bookBtn');
-    const customBtn = weekBtnsContainer.querySelector('.addCustom');
+  function renderWeekEditor(weekNum) {
+      const weekData = (currentSubjectData.weeks || []).find(w => w.week === weekNum) || {};
+      editorContainer.innerHTML = `
+        <h2>კვირა ${weekNum}</h2>
+        <label>თემის სათაური</label>
+        <div class="topicField" contenteditable="true">${weekData.topic || ""}</div>
 
-    const buttons = [...weekBox.querySelectorAll(".customBtnRow")];
-    const hasSlide = buttons.some(row => row.dataset.type === 'slide');
-    const hasVideo = buttons.some(row => row.dataset.type === 'video');
-    const hasBook = buttons.some(row => row.dataset.type === 'book');
-    const embedCount = buttons.filter(row => row.dataset.type !== 'custom').length;
+        <label>ლექციის ტიპი</label>
+        <select class="weekType">
+          <option value="ლექცია">ლექცია</option>
+          <option value="ლექცია (ქვიზი)">ლექცია (ქვიზი)</option>
+          <option value="შუალედური">შუალედური</option>
+          <option value="პრეზენტაცია">პრეზენტაცია</option>
+        </select>
 
-    const limitReached = embedCount >= 3;
+        <label>ბმულები</label>
+        <div class="buttons-box"></div>
 
-    if (slideBtn) slideBtn.style.display = hasSlide || limitReached ? "none" : "inline-flex";
-    if (videoBtn) videoBtn.style.display = hasVideo || limitReached ? "none" : "inline-flex";
-    if (bookBtn) bookBtn.style.display = hasBook || limitReached ? "none" : "inline-flex";
-    if (customBtn) customBtn.style.display = limitReached ? "none" : "inline-flex";
+        <div class="weekBtns" style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="addBtn slideBtn" style="background-color:#e8980e;"><img src="https://github.com/WEEKGE/weeksy-assets00002222/raw/refs/heads/main/svgs/add.svg" width="18" height="18" alt="">სლაიდის დამატება</button>
+          <button class="addBtn videoBtn" style="background-color:#eb1515;"><img src="https://github.com/WEEKGE/weeksy-assets00002222/raw/refs/heads/main/svgs/add.svg" width="18" height="18" alt="">ვიდეოს დამატება</button>
+          <button class="addBtn bookBtn" style="background-color:#0e86e8;"><img src="https://github.com/WEEKGE/weeksy-assets00002222/raw/refs/heads/main/svgs/add.svg" width="18" height="18" alt="">წიგნის დამატება</button>
+          <button class="addBtn addCustom" style="background-color:#323742;"><img src="https://github.com/WEEKGE/weeksy-assets00002222/raw/refs/heads/main/svgs/add.svg" width="18" height="18" alt="">სხვა რესურსის დამატება</button>
+        </div>
+      `;
+
+      const typeSelect = editorContainer.querySelector('.weekType');
+      if (weekData.type) typeSelect.value = weekData.type;
+
+      const btnBox = editorContainer.querySelector('.buttons-box');
+      (weekData.buttons || []).forEach(b => btnBox.append(createButtonEditor(b, editorContainer, false, weekNum)));
+      new Sortable(btnBox, { animation: 150, handle: '.drag-handle', onEnd: markDirty });
+
+      const checkEmbedLimit = () => {
+          const embedCount = [...btnBox.querySelectorAll(".customBtnRow")].filter(row => row.dataset.type !== 'custom').length;
+          if (embedCount >= 3) { alert("You can add a maximum of 3 embeds per week."); return false; }
+          return true;
+      };
+
+      editorContainer.querySelector(".slideBtn").onclick = () => {
+          if (!checkEmbedLimit() || [...btnBox.querySelectorAll(".customBtnRow")].some(r => r.dataset.type === 'slide')) return;
+          btnBox.append(createButtonEditor({type: 'slide', label:"სლაიდი", link:"DRIVELINK/preview", colorName:"yellow"}, editorContainer, false, weekNum));
+          updateAddButtonsVisibility(editorContainer, false); markDirty();
+      };
+      editorContainer.querySelector(".videoBtn").onclick = () => {
+          if (!checkEmbedLimit() || [...btnBox.querySelectorAll(".customBtnRow")].some(r => r.dataset.type === 'video')) return;
+          btnBox.append(createButtonEditor({type: 'video', label:"ვიდეო", link:"", colorName:"red"}, editorContainer, false, weekNum));
+          updateAddButtonsVisibility(editorContainer, false); markDirty();
+      };
+      editorContainer.querySelector(".bookBtn").onclick = () => {
+          if (!checkEmbedLimit() || [...btnBox.querySelectorAll(".customBtnRow")].some(r => r.dataset.type === 'book')) return;
+          btnBox.append(createButtonEditor({type: 'book', label:"წიგნი", link:"", colorName:"blue"}, editorContainer, false, weekNum));
+          updateAddButtonsVisibility(editorContainer, false); markDirty();
+      };
+      editorContainer.querySelector(".addCustom").onclick = () => {
+          btnBox.append(createButtonEditor({type: 'custom', label:"", link:"", colorName:"green"}, editorContainer, false, weekNum));
+          markDirty();
+      };
+
+      updateAddButtonsVisibility(editorContainer, false);
+
+      editorContainer.querySelector(".topicField").addEventListener("input", markDirty);
+      typeSelect.addEventListener("input", markDirty);
   }
 
   /* === Collect and Save (manual) === */
   function collectForm(){
     if(!currentId) return null;
 
-    const globalBtns=[...document.querySelectorAll("#globalBtns .customBtnRow")].map(b=>({
-      type: b.dataset.type,
-      label:b.querySelector(".btnLabel").value,
-      link:b.querySelector(".btnLink").value,
-      colorName:b.dataset.colorName
-    }));
+    // Create a copy to modify
+    const payload = JSON.parse(JSON.stringify(currentSubjectData));
 
-    const weeks=[];
-    for(let i=1;i<=13;i++){
-      const topic=(document.querySelector("#topic-"+i)?.innerHTML||"").trim();
-      const type=(document.querySelector("#type-"+i)?.value)||"ლექცია";
-      const weekDiv=document.querySelector("#buttons-"+i);
-      const buttons=[...(weekDiv?.querySelectorAll(".customBtnRow")||[])].map(b=>({
-        type: b.dataset.type,
-        label:b.querySelector(".btnLabel").value,
-        link:b.querySelector(".btnLink").value,
-        colorName:b.dataset.colorName
-      }));
-      const w={week:i,type,buttons};
-      if(topic) w.topic=topic;
-      weeks.push(w);
+    // If global editor is active, save its fields
+    if (currentWeek === 'global') {
+        payload.name = $("#subjectName").value.trim();
+        payload.theme = $("#subjectSymbolName").value.trim();
+        payload.imageUrl = currentImageUrl;
+        payload.globalButtons = [...editorContainer.querySelectorAll("#globalBtns .customBtnRow")].map(b => ({
+            type: b.dataset.type,
+            label: b.querySelector(".btnLabel").value,
+            link: b.querySelector(".btnLink").value,
+            colorName: b.dataset.colorName
+        }));
+    } else { // If a week editor is active
+        const weekNum = parseInt(currentWeek, 10);
+        let weekData = payload.weeks.find(w => w.week === weekNum);
+        if (!weekData) {
+            weekData = { week: weekNum };
+            payload.weeks.push(weekData);
+        }
+
+        weekData.topic = (editorContainer.querySelector(".topicField")?.innerHTML || "").trim();
+        weekData.type = (editorContainer.querySelector(".weekType")?.value) || "ლექცია";
+        weekData.buttons = [...(editorContainer.querySelectorAll(".buttons-box .customBtnRow") || [])].map(b => ({
+            type: b.dataset.type,
+            label: b.querySelector(".btnLabel").value,
+            link: b.querySelector(".btnLink").value,
+            colorName: b.dataset.colorName
+        }));
     }
 
-    const name=$("#subjectName").value.trim();
-    const theme=$("#subjectSymbolName").value.trim(); // Repurpose 'theme' for symbol name
-
-    return { id: currentId, name, theme, imageUrl: currentImageUrl, globalButtons: globalBtns, weeks };
+    return payload;
   }
 
   async function saveNow(){
@@ -1080,11 +1049,14 @@ function createButtonEditor(b, weekIndex = null, isGlobal = false){
     try{
       setSaveState("wait");
       await db.collection("subjects").doc(currentId).set(payload, { merge:true });
-      setSaveState("saved");
-      showToast("✅ Changes saved","#38d98a");
-      // განახლდეს სია სახელის ცვლილების შემთხვევაში
+      
+      // Update local cache
+      currentSubjectData = payload;
       const idx = subjects.findIndex(s => s.id === currentId);
-      if(idx>-1){ subjects[idx] = {...subjects[idx], ...payload}; renderList(); }
+      if(idx > -1) subjects[idx] = { ...subjects[idx], ...payload };
+      
+      setSaveState("saved");
+      renderSubjectList(); // Update list in case name changed
     }catch(e){
       console.error(e);
       setSaveState("error");
@@ -1098,14 +1070,17 @@ function createButtonEditor(b, weekIndex = null, isGlobal = false){
     try{
       setSaveState("wait");
       await db.collection("subjects").doc(currentId).delete();
-      $("#editor").style.display="none";
-      const removedId = currentId;
-      currentId=null;
+      
+      currentId = null;
+      currentSubjectData = null;
+      currentWeek = null;
+      
+      $("#weeksPanel").style.display = "none";
+      editorContainer.innerHTML = "";
+      $("#editorTitle").textContent = "აირჩიე საგანი გადასაკეთებლად";
+
       await loadSubjects();
       setSaveState("saved");
-      showToast("🗑️ Deleted","#ed3737");
-      // აქტიური highlight მოხდეს
-      document.querySelectorAll(".subject-item").forEach(x=>x.classList.remove("active"));
     }catch(e){
       console.error(e);
       setSaveState("error");
@@ -1116,7 +1091,6 @@ function createButtonEditor(b, weekIndex = null, isGlobal = false){
 /* === Hold-to-Delete Delay Setup === */
   function addHoldToDelete(btn, action) {
     let progress = 0, interval;
-    // create progress overlay if not exists
     let bar = btn.querySelector(".delete-progress");
     if (!bar) {
       bar = document.createElement("span");
@@ -1128,12 +1102,12 @@ function createButtonEditor(b, weekIndex = null, isGlobal = false){
       progress = 0;
       bar.style.width = "0%";
       interval = setInterval(() => {
-        progress += 100 / 20; // fill over ~3s
+        progress += 100 / 20; // fill over ~1s
         bar.style.width = progress + "%";
         if (progress >= 100) {
           clearInterval(interval);
           bar.style.width = "100%";
-          action(); // perform delete
+          action();
         }
       }, 50);
     });
@@ -1147,28 +1121,8 @@ function createButtonEditor(b, weekIndex = null, isGlobal = false){
   }
 
   /* === Wire buttons === */
-  $("#saveBtn").onclick = saveNow;
   $("#applyNavBtn").onclick = saveNow;
-
-  // replace direct delete click with hold-to-delete
-  addHoldToDelete($("#deleteBtn"), deleteCurrent);
   addHoldToDelete($("#deleteNavBtn"), deleteCurrent);
-
-  // ველების ცვლილებაზე მონიშვნა dirty
-  ["#subjectName","#subjectSymbolName"].forEach(sel=>{
-    $(sel).addEventListener("input", (e) => {
-      markDirty();
-      if (sel === "#subjectSymbolName") {
-        const symbolDisplay = $("#subjectSymbolDisplay");
-        symbolDisplay.textContent = e.target.value;
-        if (e.target.value) {
-          symbolDisplay.classList.add("material-symbols-outlined");
-        } else {
-          symbolDisplay.classList.remove("material-symbols-outlined");
-        }
-      }
-    });
-  });
 
   // Ctrl+S => Apply
   document.addEventListener("keydown", (e)=>{
@@ -1181,11 +1135,13 @@ function createButtonEditor(b, weekIndex = null, isGlobal = false){
   /* --- Formatting shortcuts (bold/italic/underline) --- */
   document.addEventListener("keydown", e => {
     if (e.ctrlKey && ["b","i","u"].includes(e.key.toLowerCase())) {
-      e.preventDefault();
-      const cmd = e.key.toLowerCase() === "b" ? "bold" :
-                  e.key.toLowerCase() === "i" ? "italic" : "underline";
-      document.execCommand(cmd, false, null);
-      markDirty();
+      if (document.activeElement.classList.contains('topicField')) {
+        e.preventDefault();
+        const cmd = e.key.toLowerCase() === "b" ? "bold" :
+                    e.key.toLowerCase() === "i" ? "italic" : "underline";
+        document.execCommand(cmd, false, null);
+        markDirty();
+      }
     }
   });
 }
