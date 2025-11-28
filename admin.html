@@ -474,10 +474,11 @@ fetch("https://raw.githubusercontent.com/WEEKGE/live/main/config.json")
 
 function startAdmin(){
   const auth = firebase.auth(), db = firebase.firestore();
-  let user = null, subjects = [], currentSubjectData = null, currentId = null, currentWeek = null;
+  let user = null, subjects = [], currentSubjectData = null, draftSubjectData = null, currentId = null, currentWeek = null;
   let isDirty = false;
 
-  const ADMIN_EMAILS = ["davit.gvakharia@gmail.com"];
+  // Obfuscated admin email to prevent scraping. It's decoded at runtime.
+  const ADMIN_EMAILS = [atob("ZGF2aXQuZ3Zha2hhcmlhQGdtYWlsLmNvbQ==")];
   const $ = s => document.querySelector(s);
   const el = (t, p = {}, kids = []) => { const e = document.createElement(t); Object.assign(e, p); kids.forEach(k => e.append(k)); return e; };
 
@@ -676,7 +677,8 @@ function startAdmin(){
     if(!doc.exists){ alert("Not found"); return; }
     
     currentId = id;
-    currentSubjectData = doc.data();
+    currentSubjectData = doc.data(); // This is the "pristine" data from DB
+    draftSubjectData = JSON.parse(JSON.stringify(currentSubjectData)); // This is the "draft" for editing
     isDirty = false;
     setSaveState("saved");
 
@@ -706,18 +708,25 @@ function startAdmin(){
   }
 
   function openWeek(weekId) {
+      // Before switching, save the state of the current editor view into the draft object
+      if (currentId && currentWeek !== null) {
+          updateDraftDataFromCurrentView();
+      }
+
       currentWeek = weekId;
       document.querySelectorAll("#weeksList .week-item").forEach(item => {
           item.classList.toggle("active", String(item.dataset.week) === String(weekId));
       });
 
       fadeEditor(() => {
-          if (weekId === 'global') {
-              renderGlobalEditor();
-          } else {
-              renderWeekEditor(weekId);
-          }
+        if (weekId === 'global') {
+            renderGlobalEditor();
+        } else {
+            renderWeekEditor(weekId);
+        }
       });
+
+      
   }
 
   function updateAddButtonsVisibility(container, isGlobal = false) {
@@ -840,14 +849,14 @@ function startAdmin(){
       `;
 
       $("#subjectId").value = currentId;
-      $("#subjectName").value = currentSubjectData.name || "";
-      const symbol = currentSubjectData.theme || "";
+      $("#subjectName").value = draftSubjectData.name || "";
+      const symbol = draftSubjectData.theme || "";
       $("#subjectSymbolName").value = symbol;
       const symbolDisplay = $("#subjectSymbolDisplay");
       symbolDisplay.textContent = symbol;
       symbolDisplay.classList.toggle("material-symbols-outlined", !!symbol);
 
-      setupImageUpload(editorContainer);
+      setupImageUpload(editorContainer); // This needs to be adapted to use draftSubjectData
 
       const box = $("#globalBtns");
       (currentSubjectData.globalButtons || []).forEach(b => box.append(createButtonEditor(b, editorContainer, true)));
@@ -938,7 +947,7 @@ function startAdmin(){
   }
 
   function renderWeekEditor(weekNum) {
-      const weekData = (currentSubjectData.weeks || []).find(w => w.week === weekNum) || {};
+      const weekData = (draftSubjectData.weeks || []).find(w => w.week === weekNum) || {};
       editorContainer.innerHTML = `
         <h2>კვირა ${weekNum}</h2>
         <label>თემის სათაური</label>
@@ -1000,51 +1009,63 @@ function startAdmin(){
 
       editorContainer.querySelector(".topicField").addEventListener("input", markDirty);
       typeSelect.addEventListener("input", markDirty);
+
+      // Handle pasting plain text
+      editorContainer.querySelector(".topicField").addEventListener('paste', (event) => {
+          event.preventDefault();
+          const text = (event.clipboardData || window.clipboardData).getData('text/plain');
+          document.execCommand('insertText', false, text);
+      });
   }
 
-  /* === Collect and Save (manual) === */
-  function collectForm(){
-    if(!currentId) return null;
+  /**
+   * Reads the data from the currently visible editor (global or a specific week)
+   * and updates the draftSubjectData object with those values.
+   */
+  function updateDraftDataFromCurrentView() {
+    if (!currentId || currentWeek === null) return;
 
-    // Create a copy to modify
-    const payload = JSON.parse(JSON.stringify(currentSubjectData));
-
-    // If global editor is active, save its fields
     if (currentWeek === 'global') {
-        payload.name = $("#subjectName").value.trim();
-        payload.theme = $("#subjectSymbolName").value.trim();
-        payload.imageUrl = currentImageUrl;
-        payload.globalButtons = [...editorContainer.querySelectorAll("#globalBtns .customBtnRow")].map(b => ({
+        draftSubjectData.name = $("#subjectName").value.trim();
+        draftSubjectData.theme = $("#subjectSymbolName").value.trim();
+        draftSubjectData.imageUrl = currentImageUrl;
+        draftSubjectData.globalButtons = [...editorContainer.querySelectorAll("#globalBtns .customBtnRow")].map(b => ({
             type: b.dataset.type,
             label: b.querySelector(".btnLabel").value,
             link: b.querySelector(".btnLink").value,
             colorName: b.dataset.colorName
         }));
-    } else { // If a week editor is active
+    } else {
         const weekNum = parseInt(currentWeek, 10);
-        let weekData = payload.weeks.find(w => w.week === weekNum);
+        let weekData = draftSubjectData.weeks.find(w => w.week === weekNum);
         if (!weekData) {
             weekData = { week: weekNum };
-            payload.weeks.push(weekData);
+            draftSubjectData.weeks.push(weekData);
         }
 
         weekData.topic = (editorContainer.querySelector(".topicField")?.innerHTML || "").trim();
         weekData.type = (editorContainer.querySelector(".weekType")?.value) || "ლექცია";
         weekData.buttons = [...(editorContainer.querySelectorAll(".buttons-box .customBtnRow") || [])].map(b => ({
             type: b.dataset.type,
-            label: b.querySelector(".btnLabel").value,
-            link: b.querySelector(".btnLink").value,
+            label: b.querySelector(".btnLabel").value.trim(),
+            link: b.querySelector(".btnLink").value.trim(),
             colorName: b.dataset.colorName
         }));
-    }
 
-    return payload;
+        // Ensure weeks are sorted
+        draftSubjectData.weeks.sort((a, b) => a.week - b.week);
+    }
   }
 
   async function saveNow(){
     if(!currentId){ alert("ჯერ აირჩიე საგანი."); return; }
-    const payload = collectForm();
-    if(!payload) return;
+
+    // First, ensure the data from the currently visible editor is collected into the draft
+    updateDraftDataFromCurrentView();
+
+    // The payload to save is the entire draft object
+    const payload = draftSubjectData;
+    if (!payload) return;
 
     try{
       setSaveState("wait");
@@ -1052,6 +1073,7 @@ function startAdmin(){
       
       // Update local cache
       currentSubjectData = payload;
+      draftSubjectData = JSON.parse(JSON.stringify(currentSubjectData)); // Re-sync draft with new pristine data
       const idx = subjects.findIndex(s => s.id === currentId);
       if(idx > -1) subjects[idx] = { ...subjects[idx], ...payload };
       
@@ -1073,6 +1095,7 @@ function startAdmin(){
       
       currentId = null;
       currentSubjectData = null;
+      draftSubjectData = null;
       currentWeek = null;
       
       $("#weeksPanel").style.display = "none";
