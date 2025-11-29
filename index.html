@@ -48,7 +48,7 @@
     --bg-color: #121212;
     --widget-color: #1E1E1E;
     --text-color: #E0E0E0;
-    --text-muted-color: #8A8A8A;
+    --text-muted-color: color-mix(in srgb, var(--text-color) 80%, transparent);
     --accent-color: #fff;
     --accent-variant-color: #3700B3;
     --text-on-accent-color: #000000;
@@ -107,7 +107,7 @@
     background: #fff; color: #000; border: none; padding: 12px 24px; font-size: 1.1rem; 
     cursor: pointer; display: flex; align-items: center; gap: 12px; border-radius: 8px;
   }
-  #signInBtn img { height: 24px; }
+  #signInBtn img { height: 24px; user-select: none; }
 
   /* === HEADER === */
   header {
@@ -131,6 +131,11 @@
   @keyframes fadeIn {
     from { opacity: 0; transform: translateY(10px); }
     to { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes widget-fade-in {
+    from { opacity: 0; transform: scale(0.98); }
+    to { opacity: 1; transform: scale(1); }
   }
 
   /* Make main content fill height on live view */
@@ -230,8 +235,12 @@
     margin-left: auto;
   }
   .quiz-check-btn.checked {
-    background-color: rgba(255,255,255,0.08);
+    background-color: color-mix(in srgb, var(--text-color) 8%, transparent);
     color: var(--text-muted-color);
+  }
+  .quiz-check-btn.is-missed {
+    background-color: #df2222; /* Red for missed */
+    color: white;
   }
 
   #weeks-left-card {
@@ -276,6 +285,7 @@
   .subject-card.is-upcoming {
     background-color: color-mix(in srgb, var(--accent-color) 8%, var(--widget-color));
     border: 1px solid color-mix(in srgb, var(--accent-color) 20%, transparent);
+    animation: widget-fade-in 0.4s ease-out both;
   }
 
   /* .subject-card { position: relative; } /* No longer needed */
@@ -313,7 +323,7 @@
     width: 50px;
     height: 50px;
     border-radius: 50%;
-    background-color: rgba(255,255,255,0.05);
+    background-color: color-mix(in srgb, var(--text-color) 5%, transparent);
     display: grid;
     place-items: center;
     transition: background-color 0.2s ease;
@@ -436,13 +446,13 @@
     font-weight: 600;
     height: 50px;
   }
-  .widget-card .day-time-select {
-    background-color: rgba(255,255,255,0.05);
+  .widget-card .day-time-select, .settings-item .day-time-select {
+    background-color: color-mix(in srgb, var(--text-color) 5%, transparent);
     color: var(--text-color);
     -webkit-appearance: none;
     -moz-appearance: none;
     appearance: none;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%23E0E0E0' class='bi bi-chevron-down' viewBox='0 0 16 16'%3E%3Cpath fill-rule='evenodd' d='M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z'/%3E%3C/svg%3E");
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='currentColor' class='bi bi-chevron-down' viewBox='0 0 16 16'%3E%3Cpath fill-rule='evenodd' d='M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z'/%3E%3C/svg%3E");
     background-repeat: no-repeat;
     background-position: right 20px center;
     background-size: 1em;
@@ -468,7 +478,7 @@
   #catalog-search {
     width: 100%;
     padding: 15px 20px 15px 45px;
-    background-color: transparent;
+    background-color: color-mix(in srgb, var(--text-color) 3%, transparent);
     border: 1px solid rgba(255, 255, 255, 0.3);
     border-radius: 999px;
     color: var(--text-color);
@@ -492,7 +502,7 @@
     height: 48px;
     border-radius: 12px;
     border: 1px solid transparent;
-    background-color: rgba(255,255,255,0.05);
+    background-color: color-mix(in srgb, var(--text-color) 5%, transparent);
     color: var(--text-muted-color);
     cursor: pointer;
     display: grid;
@@ -503,7 +513,7 @@
     flex: 1;
   }
   .weekday-btn:hover {
-    background-color: rgba(255,255,255,0.1);
+    background-color: color-mix(in srgb, var(--text-color) 10%, transparent);
   }
   .weekday-btn.active {
     background-color: var(--accent-color);
@@ -522,14 +532,14 @@
     margin-top: 10px;
   }
   .subject-carousel-nav-btn {
-    background: #ffffff10;
+    background: color-mix(in srgb, var(--text-color) 10%, transparent);
     border: none; color: var(--text-color); border-radius: 12px;
     height: 60px; cursor: pointer; display: grid; place-items: center;
     flex: 1; /* Make buttons grow to fill space */
     transition: background-color 0.2s ease;
     padding: 4px;
   }
-
+  
   .subject-carousel-nav-btn:hover {
     background: #ffffff20;
   }
@@ -631,8 +641,8 @@
     display: grid;
     place-items: center;
     cursor: pointer;
-    transition: background-color 0.2s ease;
-    color: rgba(255, 255, 255, 0.6); /* Inactive icon color */
+    transition: background-color 0.2s ease, color 0.2s ease;
+    color: var(--text-muted-color); /* Inactive icon color */
   }
   .nav-item .material-symbols-outlined {
     -webkit-user-select: none; /* Safari */
@@ -643,14 +653,7 @@
     font-variation-settings: 'FILL' 0, 'wght' 200, 'GRAD' 0;
   }
   .nav-item.active {
-    background-color: var(--accent-variant-color);
-    color: #FFFFFF; /* Active icon color */
-  }
-  .nav-item.active .material-symbols-outlined {
-    font-variation-settings: 'FILL' 1, 'wght' 200, 'GRAD' 0;
-  }
-  .nav-item.active {
-    background-color: var(--accent-variant-color);
+    background-color: var(--accent-color);
     color: var(--text-on-accent-color); /* Active icon color */
   }
   #week-selector {
@@ -978,6 +981,7 @@ function startWeekge() {
     "Ocean": { bg: "#0F2027", widget: "#203A43", text: "#ffffff", accent: "#1488CC", accentVariant: "#2B32B2", textOnAccent: "#FFFFFF" },
     "Sunset": { bg: "#2C0A1E", widget: "#4F1C3A", text: "#ffffff", accent: "#FF8C61", accentVariant: "#C83C66", textOnAccent: "#000000" },
     "Forest": { bg: "#1A2922", widget: "#2E463A", text: "#ffffff", accent: "#56C271", accentVariant: "#237A41", textOnAccent: "#000000" },
+    "Light": { bg: "#F7F7F7", widget: "#FFFFFF", text: "#000000", accent: "#000000", accentVariant: "#333333", textOnAccent: "#FFFFFF" },
   };
 
   function applyTheme(themeName) {
@@ -1201,7 +1205,7 @@ function startWeekge() {
       const subj = cache[subjId];
       if (subj && subj.weeks) {
         subj.weeks.forEach(week => {
-          if (week.type === 'ლექცია (ქვიზი)' || week.type === 'შუალედური') {
+          if (week.type === 'ლექცია (ქვიზი)' || week.type === 'შუალედური' || week.type === 'პრეზენტაცია') {
             totalQuizzes++;
 
             const quizKey = `${subjId}_${week.week + 1}`;
@@ -1462,6 +1466,7 @@ function startWeekge() {
 
       const cardClasses = ['widget-card', 'subject-card'];
       if (isUpcoming) {
+        // The animation is applied via the is-upcoming class in CSS
         cardClasses.push('is-upcoming');
       }
 
@@ -1476,17 +1481,26 @@ function startWeekge() {
       const embedLinksContainer = createEmbedLinks(subj.weekButtons);
 
       // Check for quiz and add button to the embed links container
-      if (subj.weekType === 'ლექცია (ქვიზი)' || subj.weekType === 'შუალედური') {
+      if (subj.weekType === 'ლექცია (ქვიზი)' || subj.weekType === 'შუალედური' || subj.weekType === 'პრეზენტაცია') {
         const quizKey = `${subj.id}_${selectedWeekNumber}`;
         const isChecked = quizCompletion[quizKey] === true;
+        const isPastWeek = currentWeekData && selectedWeekNumber < currentWeekData.n;
 
         const quizCheckButton = el('button', { className: 'quiz-check-btn', title: 'ქვიზი დაწერილია' });
         if (isChecked) {
           quizCheckButton.classList.add('checked');
+        } else if (isPastWeek) {
+          quizCheckButton.classList.add('is-missed');
+          quizCheckButton.title = 'ქვიზი გამოტოვებულია';
         }
+
         quizCheckButton.append(el('span', { className: 'material-symbols-outlined', textContent: 'check' }));
 
         quizCheckButton.onclick = (e) => {
+          // If it was a missed button, remove the 'is-missed' class so the 'checked' style can apply correctly.
+          if (quizCheckButton.classList.contains('is-missed')) {
+            quizCheckButton.classList.remove('is-missed');
+          }
           const newState = quizCheckButton.classList.toggle('checked');
           saveQuizStatus(subj.id, selectedWeekNumber, newState);
           initSummaryWidget(); // Update summary widget on click
@@ -1494,13 +1508,26 @@ function startWeekge() {
         embedLinksContainer.append(quizCheckButton);
       }
 
+      const subtitleEl = el('p', { className: 'widget-subtitle' });
+
+      if (subj.weekType === 'პრეზენტაცია' || subj.weekType === 'შუალედური') {
+        subtitleEl.textContent = subj.weekType;
+        subtitleEl.style.color = 'var(--accent-color)';
+        subtitleEl.style.fontWeight = '700';
+      } else if (subj.weekType === 'ლექცია (ქვიზი)') {
+        subtitleEl.innerHTML = `ლექცია (<b style="color: var(--accent-color); font-weight: 700;">ქვიზი</b>)`;
+      } else {
+        subtitleEl.textContent = subj.weekType || 'ლექცია';
+      }
+
       const card = el('div', { className: cardClasses.join(' ') }, [
         titleEl,
-        el('p', { className: 'widget-subtitle', textContent: subj.weekType || 'ლექცია' }),
+        subtitleEl,
         el('div', { className: 'topic', innerHTML: subj.weekTopic }),
         embedLinksContainer
       ]);
       grid.append(card);
+      card.style.animation = 'widget-fade-in 0.4s ease-out both';
     });
   }
 
@@ -1751,7 +1778,7 @@ function startWeekge() {
       const navContainer = el('div', { className: 'subject-carousel-nav-container' }, [prevBtn, nextBtn]);
 
       // This is now an item within a widget, not a full widget-card itself.
-      return el('div', { className: 'settings-item', style: 'flex-direction: column; align-items: stretch; padding: 15px; background: rgba(255,255,255,0.03); border-radius: 12px; gap: 15px; border-bottom: none; flex-grow: 1; display: flex;' }, [
+      return el('div', { className: 'settings-item', style: 'flex-direction: column; align-items: stretch; padding: 15px; background: color-mix(in srgb, var(--text-color) 3%, transparent); border-radius: 12px; gap: 15px; border-bottom: none; flex-grow: 1; display: flex;' }, [
           el('div', {style: 'display: flex; justify-content: space-between; align-items: flex-start;'}, [
             el('h3', { className: 'widget-title', textContent: subj.name, style: 'font-size: 1.1rem;' }),
           removeBtn,
