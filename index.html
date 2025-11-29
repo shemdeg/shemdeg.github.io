@@ -243,11 +243,21 @@
     #settings-grid {
       grid-template-columns: 1fr 1fr 1fr; /* Three equal columns */
     }
+  }
+  .settings-column {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+  @media screen and (min-width: 1024px) {
+    #settings-grid {
+      grid-template-columns: 1fr 1fr 1fr; /* Three equal columns */
+    }
     .settings-column {
       display: flex;
       flex-direction: column;
       gap: 20px;
-      min-height: 0; /* Prevent flexbox overflow */
+      height: 100%;
     }
     .settings-column > .widget-card {
       flex-grow: 1; /* Allow widgets to grow to fill the column */
@@ -270,7 +280,7 @@
     color: var(--bg-color);
     border: none;
     width: 36px; height: 36px;
-    border-radius: 50%;
+    border-radius: 12px;
     cursor: pointer;
     display: grid; place-items: center;
     transition: background-color 0.2s ease;
@@ -310,8 +320,10 @@
     appearance: none;
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%23E0E0E0' class='bi bi-chevron-down' viewBox='0 0 16 16'%3E%3Cpath fill-rule='evenodd' d='M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z'/%3E%3C/svg%3E");
     background-repeat: no-repeat;
-    background-position: right 16px center;
+    background-position: right 20px center;
     background-size: 1em;
+    height: 50px;
+    padding-right: 45px; /* Ensure text doesn't overlap arrow */
   }
   .day-time-select option { background-color: var(--widget-color); color: var(--text-color); }
   .settings-item .day-time-select:hover, .duration-selector select:hover {
@@ -406,6 +418,12 @@
     display: flex;
     flex-wrap: wrap;
     gap: 15px;
+  }
+  @media screen and (max-width: 768px) {
+    #settings-view .theme-selector .themes {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+    }
   }
   .theme-option {
     border: 2px solid transparent;
@@ -1002,7 +1020,31 @@ function startWeekge() {
   /* === WEEKS BAR / SELECTOR === */
   function renderWeeksBar() {
     const container = $('#weeks-bar-container');
-    // container.innerHTML = ''; // Don't clear the pre-rendered mobile nav
+    container.innerHTML = ''; // Clear previous content
+
+    // --- Desktop Weeks Bar (Horizontal List) ---
+    const chooser = el('div', { className: 'weeks-chooser' });
+    SEMESTER_WEEKS.forEach(week => {
+      const btn = el('button', { className: 'week-button', textContent: `კვირა ${week.n}` });
+      if (week.n === selectedWeekNumber) btn.classList.add('active');
+      if (currentWeekData && week.n === currentWeekData.n) btn.classList.add('is-current');
+      btn.onclick = () => {
+        selectedWeekNumber = week.n;
+        renderHomePage();
+        renderWeeksBar(); // Re-render to update active state
+      };
+      chooser.append(btn);
+    });
+    container.append(chooser);
+
+    // --- Pre-render Mobile Navigator and append it ---
+    const mobileNavTemplate = `
+      <div class="weeks-mobile-nav" style="display: none;">
+        <button class="nav-arrow" id="mobile-prev-week"><span class="material-symbols-outlined">arrow_back_ios</span></button>
+        <div class="current-week-display"></div>
+        <button class="nav-arrow" id="mobile-next-week"><span class="material-symbols-outlined">arrow_forward_ios</span></button>
+      </div>`;
+    container.insertAdjacentHTML('beforeend', mobileNavTemplate);
 
     // --- Fullscreen Overlay Logic ---
     const weekSelectorOverlay = $('#week-selector-overlay');
@@ -1084,11 +1126,29 @@ function startWeekge() {
         const subj = cache[id];
         if (!subj) return null;
 
-        // Find the specific data for the currently selected week
-        const weekData = subj.weeks?.find(w => w.week === selectedWeekNumber - 1) || {};
-
         const dayData = userDays?.[id] ?? { day: null, time: null };
 
+        // --- NEW LOGIC: Determine which week's content to show ---
+        let weekContentToShow = selectedWeekNumber;
+        const isCurrentWeekSelected = currentWeekData && selectedWeekNumber === currentWeekData.n;
+
+        if (isCurrentWeekSelected && dayData.day && dayData.time) {
+            const now = new Date();
+            const lectureDayIndex = daysOfWeek.indexOf(dayData.day);
+            const todayDayIndex = now.getDay() === 0 ? 6 : now.getDay() - 1;
+            const [lectureHour, lectureMinute] = dayData.time.split(':').map(Number);
+
+            // Check if the lecture for this week has already passed
+            if (lectureDayIndex < todayDayIndex || (lectureDayIndex === todayDayIndex && (now.getHours() > lectureHour || (now.getHours() === lectureHour && now.getMinutes() >= lectureMinute)))) {
+                // Lecture has passed, do nothing (show current selected week)
+            } else {
+                // Lecture is upcoming, show previous week's content if possible
+                if (weekContentToShow > 1) {
+                    weekContentToShow = selectedWeekNumber - 1;
+                }
+            }
+        }
+        const weekData = subj.weeks?.find(w => w.week === weekContentToShow - 1) || {};
         return {
             ...subj,
             // Pass along the specific week's data
@@ -1281,7 +1341,12 @@ function startWeekge() {
                 button = el('button', { className: 'action-btn added', disabled: true }, [ el('span', { className: 'material-symbols-outlined', textContent: 'check' }) ]);
             } else {
                 button = el('button', { className: 'action-btn' }, [ el('span', { className: 'material-symbols-outlined', textContent: 'add' }) ]);
-                button.onclick = () => { selected.push(subj.id); autoSave(); renderSettingsPage(); };
+                button.onclick = () => { 
+                    selected.push(subj.id); 
+                    // Set default day and time on add
+                    userDays[subj.id] = { day: daysOfWeek[0], time: "09:00" };
+                    autoSave(); renderSettingsPage(); 
+                };
             }
             catalogContent.append(el('div', { className: 'settings-item' }, [ el('div', { className: 'name', textContent: subj.name }), button ]));
         });
@@ -1342,21 +1407,19 @@ function startWeekge() {
         }
         dayBtn.onclick = () => {
           if (!userDays[subj.id]) userDays[subj.id] = { day: null, time: null };
-          
-          if (userDays[subj.id].day === day) {
-            userDays[subj.id].day = null; // Deselect
-          } else {
-            userDays[subj.id].day = day; // Select
+
+          // Only allow changing to a different day, not deselecting.
+          if (userDays[subj.id].day !== day) {
+            userDays[subj.id].day = day;
+            autoSave();
+            renderSettingsPage(); // Re-render to show active state change
           }
-          
-          autoSave();
-          renderSettingsPage(); // Re-render to show active state change
         };
         weekdayContainer.append(dayBtn);
       });
 
       const removeBtn = el('button', { className: 'action-btn remove' }, [
-        el('span', { className: 'material-symbols-outlined', textContent: 'remove' })
+        el('span', { className: 'material-symbols-outlined', textContent: 'close' })
       ]);
       removeBtn.onclick = () => {
         selected = selected.filter(id => id !== subj.id);
