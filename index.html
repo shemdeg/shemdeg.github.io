@@ -69,6 +69,8 @@
 
   html {
     color-scheme: dark;
+    -webkit-text-size-adjust: 100%;
+    -webkit-font-smoothing: antialiased;
   }
 
   body {
@@ -1194,33 +1196,37 @@ function startWeekge() {
     const weeksLeft = (!currentWeekData || currentWeekData.n > lastWeekNumber) ? 0 : (lastWeekNumber - currentWeekData.n) + 1;
 
     // 2. Quiz stats
-    const completedQuizzes = Object.values(quizCompletion).filter(Boolean).length;
-    let totalQuizzes = 0;
+    let completedQuizzes = 0;
     let missedQuizzes = 0;
-    const now = new Date();
-    const [hours, minutes] = lectureDuration.split(':').map(Number);
-    const lectureDurationMs = (hours * 60 * 60 * 1000) + (minutes * 60 * 1000);
+    let remainingQuizzes = 0;
+    const currentWeekNum = currentWeekData ? currentWeekData.n : 1; // Default to week 1 if not found
     
     selected.forEach(subjId => {
       const subj = cache[subjId];
       if (subj && subj.weeks) {
         subj.weeks.forEach(week => {
-          if (week.type === 'ლექცია (ქვიზი)' || week.type === 'შუალედური' || week.type === 'პრეზენტაცია') {
-            totalQuizzes++;
-
-            const quizKey = `${subjId}_${week.week + 1}`;
+          if (['ლექცია (ქვიზი)', 'შუალედური', 'პრეზენტაცია'].includes(week.type)) {
+            const weekNumber = week.week + 1;
+            const quizKey = `${subjId}_${weekNumber}`;
             const isCompleted = quizCompletion[quizKey] === true;
 
-            // Check if missed
-            const weekInfo = weekDates.find(wd => wd.n === (week.week + 1));
-            if (!isCompleted && weekInfo && weekInfo.end < todayISO()) {
+            if (isCompleted) {
+              completedQuizzes++;
+              return; // Go to the next week, no more checks needed for this one.
+            }
+
+            // If not completed, check if it's a past, current, or future quiz.
+            if (weekNumber < currentWeekNum) {
+                // This is a missed quiz from a past week.
                 missedQuizzes++;
+            } else { // This includes current (weekNumber == currentWeekNum) and future weeks.
+                // This is a quiz for the current or a future week.
+                remainingQuizzes++;
             }
           }
         });
       }
     });
-    const remainingQuizzes = totalQuizzes - completedQuizzes;
 
     // --- Create Widget ---
     const createStatItem = (label, value, valueStyle = {}) => {
@@ -1240,9 +1246,9 @@ function startWeekge() {
         className: 'widget-card' 
     }, [
         createStatItem('კვირა გამოცდამდე', weeksLeft),
-        createStatItem('ჩაბარებული ქვიზი', completedQuizzes, completedStyle),
         createStatItem('ჩასაბარებელი ქვიზი', remainingQuizzes, {}),
-        createStatItem('გამოტოვებული ქვიზი', missedQuizzes, missedStyle)
+        createStatItem('ჩაბარებული ქვიზი', completedQuizzes, completedStyle),
+        createStatItem('აღსადგენი ქვიზი', missedQuizzes, missedStyle),
     ]);
 
     // summaryCard.style.gap = '10px'; // This is now handled by CSS
@@ -1482,7 +1488,7 @@ function startWeekge() {
 
       // Check for quiz and add button to the embed links container
       if (subj.weekType === 'ლექცია (ქვიზი)' || subj.weekType === 'შუალედური' || subj.weekType === 'პრეზენტაცია') {
-        const quizKey = `${subj.id}_${selectedWeekNumber}`;
+        const quizKey = `${subj.id}_${selectedWeekNumber + 1}`;
         const isChecked = quizCompletion[quizKey] === true;
         const isPastWeek = currentWeekData && selectedWeekNumber < currentWeekData.n;
 
@@ -1502,7 +1508,13 @@ function startWeekge() {
             quizCheckButton.classList.remove('is-missed');
           }
           const newState = quizCheckButton.classList.toggle('checked');
-          saveQuizStatus(subj.id, selectedWeekNumber, newState);
+
+          // After toggling, re-evaluate if it should be 'missed'.
+          // It's missed if it's a past week and it's NOT checked.
+          if (isPastWeek && !quizCheckButton.classList.contains('checked')) {
+            quizCheckButton.classList.add('is-missed');
+          }
+          saveQuizStatus(subj.id, selectedWeekNumber + 1, newState);
           initSummaryWidget(); // Update summary widget on click
         };
         embedLinksContainer.append(quizCheckButton);
