@@ -1201,31 +1201,35 @@ function startWeekge() {
     let remainingQuizzes = 0;
     const currentWeekNum = currentWeekData ? currentWeekData.n : 1; // Default to week 1 if not found
     
+    // Iterate over every selected subject
     selected.forEach(subjId => {
       const subj = cache[subjId];
-      if (subj && subj.weeks) {
-        subj.weeks.forEach(week => {
-          if (['ლექცია (ქვიზი)', 'შუალედური', 'პრეზენტაცია'].includes(week.type)) {
-            const weekNumber = week.week + 1;
-            const quizKey = `${subjId}_${weekNumber}`;
-            const isCompleted = quizCompletion[quizKey] === true;
+      if (!subj) return; // Skip if subject not in cache
 
-            if (isCompleted) {
-              completedQuizzes++;
-              return; // Go to the next week, no more checks needed for this one.
-            }
+      // Iterate over ALL possible semester weeks for each subject
+      SEMESTER_WEEKS.forEach(semesterWeek => {
+        const weekNumber = semesterWeek.n;
+        
+        // Find the specific week data for this subject, if it exists
+        const subjectWeekData = subj.weeks?.find(w => w.week === weekNumber);
+        const weekType = subjectWeekData?.type;
 
-            // If not completed, check if it's a past, current, or future quiz.
-            if (weekNumber < currentWeekNum) {
-                // This is a missed quiz from a past week.
-                missedQuizzes++;
-            } else { // This includes current (weekNumber == currentWeekNum) and future weeks.
-                // This is a quiz for the current or a future week.
-                remainingQuizzes++;
-            }
+        // Only count if the week type indicates a quiz
+        if (['ლექცია (ქვიზი)', 'შუალედური', 'პრეზენტაცია'].includes(weekType)) {
+          const quizKey = `${subjId}_${weekNumber}`;
+          const isCompleted = quizCompletion[quizKey] === true;
+
+          if (isCompleted) {
+            completedQuizzes++;
+          } else if (weekNumber < currentWeekNum) {
+            // Not completed and in the past -> Missed
+            missedQuizzes++;
+          } else {
+            // Not completed and is current or future -> Remaining
+            remainingQuizzes++;
           }
-        });
-      }
+        }
+      });
     });
 
     // --- Create Widget ---
@@ -1502,18 +1506,19 @@ function startWeekge() {
         quizCheckButton.append(el('span', { className: 'material-symbols-outlined', textContent: 'check' }));
 
         quizCheckButton.onclick = (e) => {
-          // If it was a missed button, remove the 'is-missed' class so the 'checked' style can apply correctly.
-          if (quizCheckButton.classList.contains('is-missed')) {
-            quizCheckButton.classList.remove('is-missed');
-          }
-          const newState = quizCheckButton.classList.toggle('checked');
-
-          // After toggling, re-evaluate if it should be 'missed'.
-          // It's missed if it's a past week and it's NOT checked.
-          if (isPastWeek && !quizCheckButton.classList.contains('checked')) {
+          // 1. Determine the new state by checking the current class
+          const isCurrentlyChecked = quizCheckButton.classList.contains('checked');
+          const newState = !isCurrentlyChecked;
+          
+          // 2. Update the data model
+          saveQuizStatus(subj.id, selectedWeekNumber, newState);
+          
+          // 3. Update the UI based on the new state
+          quizCheckButton.classList.toggle('checked', newState);
+          quizCheckButton.classList.remove('is-missed'); // Always remove 'is-missed' first
+          if (isPastWeek && !newState) {
             quizCheckButton.classList.add('is-missed');
           }
-          saveQuizStatus(subj.id, selectedWeekNumber, newState);
           initSummaryWidget(); // Update summary widget on click
         };
         embedLinksContainer.append(quizCheckButton);
