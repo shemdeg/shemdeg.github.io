@@ -253,42 +253,6 @@
     border: 1px solid color-mix(in srgb, var(--accent-color) 20%, transparent);
   }
 
-  #quiz-progress-widget {
-    grid-column: span 2;
-    grid-row: span 2;
-    padding: 25px;
-  }
-  .quiz-progress-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    grid-template-rows: 1fr 1fr;
-    gap: 25px;
-    height: 100%;
-  }
-  .quiz-progress-item {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-  }
-  .quiz-progress-item .name {
-    font-weight: 600;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-  .quiz-progress-item .progress-bar-bg {
-    width: 100%;
-    height: 8px;
-    background-color: rgba(255,255,255,0.1);
-    border-radius: 4px;
-    overflow: hidden;
-  }
-  .quiz-progress-item .progress-bar-fg {
-    height: 100%;
-    background-color: var(--accent-color);
-    border-radius: 4px;
-    transition: width 0.5s ease-out;
-  }
   /* .subject-card { position: relative; } /* No longer needed */
   .subject-card .topic {
     font-size: 1rem;
@@ -1095,7 +1059,7 @@ function startWeekge() {
     
     initLiveTime();
     initWeeksLeftWidget();
-    initQuizProgressWidget();
+    initQuizCounterWidget(); // Add this call
     initNavigation();
   }
 
@@ -1212,49 +1176,26 @@ function startWeekge() {
     $('#live-time-card').after(weeksLeftCard);
   }
 
-  function initQuizProgressWidget() {
-    const subjectsWithQuizzes = selected.map(id => {
-      const subj = cache[id];
-      if (!subj || !subj.weeks) return null;
+  function initQuizCounterWidget() {
+    const existingCard = $('#quiz-counter-card');
+    if (existingCard) existingCard.remove();
 
-      let totalQuizzes = 0;
-      let completedQuizzes = 0;
+    const completedQuizzes = Object.values(quizCompletion).filter(Boolean).length;
 
-      SEMESTER_WEEKS.forEach(week => {
-        const weekData = subj.weeks.find(w => w.week === week.n);
-        if (weekData && weekData.type === 'ლექცია (ქვიზი)') {
-          totalQuizzes++;
-          const quizKey = `${id}_${week.n}`;
-          if (quizCompletion[quizKey]) {
-            completedQuizzes++;
-          }
-        }
-      });
+    const numberEl = el('div', { className: 'number', textContent: completedQuizzes });
+    const labelEl = el('div', { className: 'label', textContent: 'ჩაბარებული ქვიზი' });
+    const quizCounterCard = el('div', { 
+        id: 'quiz-counter-card', 
+        className: 'widget-card' 
+    }, [numberEl, labelEl]);
 
-      if (totalQuizzes > 0) {
-        return { ...subj, totalQuizzes, completedQuizzes };
-      }
-      return null;
-    }).filter(Boolean);
+    // Style it similarly to the weeks-left-card
+    quizCounterCard.style.backgroundColor = 'color-mix(in srgb, var(--accent-color) 8%, var(--widget-color))';
+    quizCounterCard.style.border = '1px solid color-mix(in srgb, var(--accent-color) 20%, transparent)';
+    quizCounterCard.style.textAlign = 'center';
+    quizCounterCard.style.justifyContent = 'center';
 
-    if (subjectsWithQuizzes.length === 0) return; // Don't show widget if no subjects have quizzes
-
-    const progressGrid = el('div', { className: 'quiz-progress-grid' });
-
-    subjectsWithQuizzes.slice(0, 4).forEach(subj => {
-      const percentage = subj.totalQuizzes > 0 ? (subj.completedQuizzes / subj.totalQuizzes) * 100 : 0;
-      const item = el('div', { className: 'quiz-progress-item' }, [
-        el('div', { className: 'name', textContent: subj.name }),
-        el('div', { className: 'progress-bar-bg' }, [
-          el('div', { className: 'progress-bar-fg', style: `width: ${percentage}%` })
-        ]),
-        el('div', { className: 'widget-subtitle', textContent: `${subj.completedQuizzes} / ${subj.totalQuizzes} ქვიზი`})
-      ]);
-      progressGrid.append(item);
-    });
-
-    const widget = el('div', { id: 'quiz-progress-widget', className: 'widget-card' }, [progressGrid]);
-    $('#home-grid').append(widget);
+    $('#weeks-left-card').after(quizCounterCard);
   }
 
   /* === WEEKS BAR / SELECTOR === */
@@ -1502,6 +1443,7 @@ function startWeekge() {
         quizCheckButton.onclick = (e) => {
           const newState = !quizCheckButton.classList.toggle('checked');
           saveQuizStatus(subj.id, selectedWeekNumber, newState);
+          initQuizCounterWidget(); // Update counter on click
         };
         embedLinksContainer.append(quizCheckButton);
       }
