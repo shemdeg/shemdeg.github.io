@@ -732,6 +732,7 @@
     width: fit-content; /* Shrink to content */
     margin: 0 auto; /* Center horizontally */
     transition: background-color 0.2s ease;
+    position: relative; /* For notification dot positioning */
   }
 
   .weeks-mobile-nav .nav-arrow {
@@ -761,6 +762,21 @@
   .weeks-mobile-nav.is-current .nav-arrow {
     color: var(--text-on-accent-color);
     background-color: transparent; /* Ensure children are transparent */
+  }
+
+  .missed-quiz-dot {
+    position: absolute;
+    top: -2px;
+    right: -2px;
+    background-color: #ff3e3e;
+    color: white;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    display: grid;
+    place-items: center;
+    font-size: 0.75rem;
+    font-weight: 700;
   }
 
   @media screen and (max-width: 1000px) {
@@ -1259,6 +1275,36 @@ function startWeekge() {
     $('#live-time-card').after(summaryCard);
   }
 
+  function countMissedQuizzesForWeek(weekNumber) {
+    const currentWeekNum = currentWeekData ? currentWeekData.n : 1;
+    if (weekNumber >= currentWeekNum) {
+        return 0; // Missed quizzes can only be in past weeks.
+    }
+
+    let missedCount = 0;
+    // Iterate over selected subjects
+    for (const subjId of selected) {
+        const subj = cache[subjId];
+        if (!subj) continue;
+
+        // Find the specific week data for this subject to see if it has a quiz
+        const subjectWeekData = subj.weeks?.find(w => w.week === weekNumber);
+        const weekType = subjectWeekData?.type;
+
+        // Check if this week has a quiz-like activity
+        if (['ლექცია (ქვიზი)', 'შუალედური', 'პრეზენტაცია'].includes(weekType)) {
+            const quizKey = `${subjId}_${weekNumber}`;
+            const isCompleted = quizCompletion[quizKey] === true;
+
+            // If it's a past quiz and not completed, increment the count
+            if (!isCompleted) {
+                missedCount++;
+            }
+        }
+    }
+    return missedCount;
+  }
+
   /* === WEEKS BAR / SELECTOR === */
   function renderWeeksBar() {
     const container = $('#weeks-bar-container');
@@ -1270,6 +1316,12 @@ function startWeekge() {
       const btn = el('button', { className: 'week-button', textContent: `კვირა ${week.n}` });
       if (week.n === selectedWeekNumber) btn.classList.add('active');
       if (currentWeekData && week.n === currentWeekData.n) btn.classList.add('is-current');
+      
+      const missedCount = countMissedQuizzesForWeek(week.n);
+      if (missedCount > 0) {
+        btn.style.position = 'relative'; // Needed for absolute positioning of the dot
+        btn.append(el('span', { className: 'missed-quiz-dot', textContent: missedCount }));
+      }
       btn.onclick = () => {
         selectedWeekNumber = week.n;
         renderHomePage();
@@ -1321,6 +1373,11 @@ function startWeekge() {
     mobileNav.classList.remove('is-current'); // Reset class
     if (currentWeekData && selectedWeekNumber === currentWeekData.n) {
       mobileNav.classList.add('is-current');
+    }
+    const missedCountMobile = countMissedQuizzesForWeek(selectedWeekNumber);
+    if (missedCountMobile > 0) {
+        // The mobile nav already has position: relative from CSS
+        mobileNav.append(el('span', { className: 'missed-quiz-dot', textContent: missedCountMobile }));
     }
     prevBtn.onclick = prevWeek;
     nextBtn.onclick = nextWeek;
@@ -1520,6 +1577,7 @@ function startWeekge() {
             quizCheckButton.classList.add('is-missed');
           }
           initSummaryWidget(); // Update summary widget on click
+          renderWeeksBar(); // Re-render the weeks bar to update the notification dots
         };
         embedLinksContainer.append(quizCheckButton);
       }
