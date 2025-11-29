@@ -15,6 +15,35 @@
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Georgian:wdth,wght@62.5..100,100..900&display=swap" rel="stylesheet">
 
 <style>
+
+  @font-face {
+      font-family: 'TBCContractica';
+      src: url('./font/TBCContracticaCAPS-Light.ttf') format('truetype');
+      font-weight: 300; /* Light */
+      font-style: normal;
+  }
+
+  @font-face {
+      font-family: 'TBCContractica';
+      src: url('./font/TBCContracticaCAPS-Regular.ttf') format('truetype');
+      font-weight: normal; /* Regular (400) */
+      font-style: normal;
+  }
+
+  @font-face {
+      font-family: 'TBCContractica';
+      src: url('./font/TBCContracticaCAPS-Bold.ttf') format('truetype');
+      font-weight: bold; /* Bold (700) */
+      font-style: normal;
+  }
+
+  @font-face {
+      font-family: 'TBCContractica';
+      src: url('./font/TBCContracticaCAPS-Black.ttf') format('truetype');
+      font-weight: 900; /* Black */
+      font-style: normal;
+  }
+
   :root {
     --bg-color: #121212;
     --widget-color: #1E1E1E;
@@ -24,7 +53,7 @@
     --accent-variant-color: #3700B3;
     --text-on-accent-color: #000000;
     --border-radius: 16px;
-    --font-family: "Noto Sans Georgian", sans-serif;
+    --font-family: "TBCContractica", sans-serif;
   }
 
   * {
@@ -46,7 +75,8 @@
     background-color: var(--bg-color);
     color: var(--text-color);
     font-family: var(--font-family);
-    padding: 20px 20px 120px 20px; /* Padding for content, space for bottom nav */
+    padding: 20px 20px 100px 20px; /* Padding for content, space for bottom nav */
+    min-height: 100vh;
   }
 
   /* === LOADER === */
@@ -103,15 +133,35 @@
     to { opacity: 1; transform: translateY(0); }
   }
 
+  /* Make main content fill height on live view */
+  body[data-active-view="live-view"] {
+    display: flex;
+    flex-direction: column;
+  }
+  body[data-active-view="live-view"] .main-content {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+  }
+  body[data-active-view="live-view"] #live-view {
+    display: flex; /* Make the view a flex container */
+    flex-grow: 1;
+    flex-direction: column; /* Stack children vertically */
+  }
+
+
   /* === WIDGET GRID SYSTEM (Base) === */
   .widget-grid {
     display: grid;    
     gap: 20px;
+    
   }
   
   /* === VIEW-SPECIFIC GRID STYLES === */
   #home-grid {
     grid-template-columns: repeat(5, 1fr);
+    grid-auto-rows: minmax(0, 1fr); /* Allow rows to grow and shrink */
+    height: 100%;
   }
 
   #resources-grid {
@@ -128,16 +178,23 @@
     gap: 15px;
     transition: box-shadow 0.2s ease;
     overflow: hidden; /* Prevent content from spilling out of the card */
+    min-height: 150px; /* Set a minimum height for better appearance */
   }
   .widget-card:hover {
     box-shadow: 0 8px 20px rgba(0,0,0,0.2);
   }
 
   .widget-title {
-    font-size: 1.2rem;
-    font-weight: 600;
+    font-size: 1.15rem;
+    font-weight: 500;
     color: var(--text-color);
   }
+  .widget-title.has-icon {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
   .widget-subtitle {
     font-size: 0.9rem;
     color: var(--text-muted-color);
@@ -210,11 +267,17 @@
     gap: 10px;
   }
   .embed-link:hover .icon-circle {
-    background-color: var(--accent-variant-color);
+    background-color: var(--accent-color);
+  }
+  .embed-link:hover,
+  .embed-link:hover .label,
+  .embed-link:hover .icon-circle .material-symbols-outlined {
+    color: var(--text-on-accent-color);
   }
   .embed-link .icon-circle .material-symbols-outlined {
     font-size: 24px;
     color: var(--text-color);
+    transition: color 0.2s ease;
   }
   .embed-link .label {
     font-size: 0.8rem;
@@ -307,10 +370,11 @@
     color: #ffffff;
     border-radius: 8px;
     padding: 8px 12px;
-    font-family: var(--font-family);
+    font-family: "TBCContractica", sans-serif;
     border: 1px solid transparent;
     transition: border-color 0.2s ease;
     font-weight: 600;
+    height: 50px;
   }
   .widget-card .day-time-select {
     background-color: rgba(255,255,255,0.05);
@@ -329,6 +393,7 @@
   .settings-item .day-time-select:hover, .duration-selector select:hover {
     border-color: var(--accent-color);
   }
+  
   .search-input-container {
     position: relative;
     margin-bottom: 15px;
@@ -348,7 +413,7 @@
     border-radius: 999px;
     color: var(--text-color);
     font-size: 1rem;
-    font-family: var(--font-family);
+    font-family: "TBCContractica", sans-serif;
     outline: none;
     transition: border-color 0.2s ease, box-shadow 0.2s ease;
   }
@@ -364,7 +429,7 @@
   }
   .weekday-btn {
     width: 42px;
-    height: 38px;
+    height: 48px;
     border-radius: 12px;
     border: 1px solid transparent;
     background-color: rgba(255,255,255,0.05);
@@ -372,7 +437,7 @@
     cursor: pointer;
     display: grid;
     place-items: center;
-    font-size: 0.8rem;
+    font-size: 0.9rem;
     font-weight: 600;
     transition: all 0.2s ease;
     flex: 1;
@@ -385,19 +450,24 @@
     color: var(--bg-color);
   }
   .subject-carousel-content {
+    flex-grow: 1; /* Allow the content area to fill vertical space */
+    display: flex; /* Make it a flex container */
+    flex-direction: column; /* Stack children vertically */
+    min-height: 0; /* Necessary for flex-grow in some browsers */
     width: 100%;
   }
   .subject-carousel-nav-container {
     display: flex;
-    justify-content: space-between; /* Pushes arrows to the sides */
+    gap: 10px;
     margin-top: 10px;
   }
   .subject-carousel-nav-btn {
-    background: transparent;
+    background: #ffffff10;
     border: none; color: var(--text-color); border-radius: 12px;
-    width: 40px; height: 40px; cursor: pointer; display: grid; place-items: center;
-    flex-shrink: 0;
+    height: 40px; cursor: pointer; display: grid; place-items: center;
+    flex: 1; /* Make buttons grow to fill space */
     transition: background-color 0.2s ease;
+    padding: 4px;
   }
   .settings-widget-content { flex-grow: 1; min-height: 0; overflow-y: auto; padding-right: 5px; }
   .settings-widget-content::-webkit-scrollbar { width: 6px; }
@@ -419,7 +489,7 @@
     flex-wrap: wrap;
     gap: 15px;
   }
-  @media screen and (max-width: 768px) {
+  @media screen and (max-width: 100px) {
     #settings-view .theme-selector .themes {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -503,7 +573,7 @@
     -webkit-user-select: none; /* Safari */
     -ms-user-select: none; /* IE 10+ and Edge */
     user-select: none; /* Standard syntax */
-    font-size: 32px;
+    font-size: 36px;
     transition: font-variation-settings 0.2s ease, color 0.2s ease;
     font-variation-settings: 'FILL' 0, 'wght' 200, 'GRAD' 0;
   }
@@ -526,7 +596,7 @@
     border: none;
     border-radius: var(--border-radius);
     font-size: 1.1rem;
-    font-family: var(--font-family);
+    font-family: "TBCContractica", sans-serif;
     appearance: none;
     -webkit-appearance: none;
     cursor: pointer;
@@ -551,17 +621,18 @@
 
   .week-button {
     flex: 1;
-    padding: 12px 5px;
+    padding: 14px 5px 10px 5px;
     border-radius: 999px;
     background-color: var(--widget-color);
     color: var(--text-muted-color);
     border: 1px solid transparent;
     text-align: center;
     cursor: pointer;
-    font-weight: 500;
+    font-weight: 600;
     transition: all 0.2s ease;
     font-size: 0.8rem;
     white-space: nowrap;
+    font-family: "TBCContractica", sans-serif;
   }
   .week-button.is-current.active {
     color: var(--text-on-accent-color); /* Ensure text is white when it's the active current week */
@@ -619,7 +690,7 @@
     background-color: transparent; /* Ensure children are transparent */
   }
 
-  @media screen and (max-width: 768px) {
+  @media screen and (max-width: 1000px) {
     body {
       padding: 100px 15px 120px 15px;
     }
@@ -637,13 +708,17 @@
     #live-time-card {
       display: none; /* Hide time widget on mobile */
     }
-    /* Hide weeks bar by default on mobile */
-    #weeks-bar-container { display: none; }
-    /* Show it only when the live-view is active, using a data-attribute on the body */
-    body[data-active-view="live-view"] #weeks-bar-container { 
-      display: block;
-      animation: fadeIn 0.3s ease-in-out;
-    }
+  }
+
+  /* Hide weeks bar on all pages except home page */
+  #weeks-bar-container {
+    display: none;
+  }
+  body[data-active-view="live-view"] #weeks-bar-container {
+    display: block;
+  }
+
+  @media screen and (max-width: 1000px) {
     .weeks-chooser {
       display: none; /* Hide desktop weeks bar on mobile */
     }
@@ -653,9 +728,6 @@
       left: 0;
       right: 0;
       z-index: 999;
-    }
-    #weeks-bar-container .weeks-mobile-nav {
-        display: flex !important; /* Override inline style to show on mobile */
     }
     .weeks-mobile-nav {
       display: flex; /* Show mobile weeks nav */
@@ -671,6 +743,19 @@
     .nav-item {
       width: 50px;
       height: 50px;
+    }
+    /* On mobile, the weeks bar is always a flex container when visible */
+    body[data-active-view="live-view"] #weeks-bar-container { 
+      display: flex;
+      justify-content: center;
+      animation: fadeIn 0.3s ease-in-out;
+    }
+    /* Hide the desktop chooser and show the mobile one */
+    body[data-active-view="live-view"] #weeks-bar-container .weeks-chooser {
+      display: none;
+    }
+    body[data-active-view="live-view"] #weeks-bar-container .weeks-mobile-nav {
+      display: flex !important;
     }
   }
 </style>
@@ -1088,6 +1173,55 @@ function startWeekge() {
 
   /* === RENDERING FUNCTIONS === */
 
+  function isSubjectEnded(subject, currentTime, durationMs) {
+    if (!subject.time || subject.dayIndex === -1 || subject.dayIndex === undefined) return false;
+
+    const nowDayIndex = currentTime.getDay() === 0 ? 6 : currentTime.getDay() - 1;
+
+    if (subject.dayIndex > nowDayIndex) {
+        return false; // Subject is on a future day of the week
+    }
+
+    const [hour, minute] = subject.time.split(':').map(Number);
+
+    // Create a date object for the subject's lecture this week
+    const subjectDate = new Date(currentTime);
+    const dayDifference = subject.dayIndex - nowDayIndex;
+    subjectDate.setDate(subjectDate.getDate() + dayDifference);
+    subjectDate.setHours(hour, minute, 0, 0);
+
+    const subjectEnd = new Date(subjectDate.getTime() + durationMs);
+
+    return currentTime > subjectEnd;
+  }
+
+  function sortByWeekdayTimeAndStatus(subjs, selectedWeekNumber, currentWeekData, lectureDuration) {
+    const now = new Date();
+    const [hours, minutes] = lectureDuration.split(':').map(Number);
+    const lectureDurationMs = (hours * 60 * 60 * 1000) + (minutes * 60 * 1000);
+
+    const isSelectedWeekCurrent = currentWeekData && (selectedWeekNumber === currentWeekData.n);
+
+    // Check if all subjects in the current week have ended
+    const allEnded = isSelectedWeekCurrent && subjs.every(s => isSubjectEnded(s, now, lectureDurationMs));
+
+    return subjs.sort((a, b) => {
+      // Only sort by "ended" status if it's the current week AND not all subjects have ended yet.
+      if (isSelectedWeekCurrent && !allEnded) {
+        const isEndedA = isSubjectEnded(a, now, lectureDurationMs);
+        const isEndedB = isSubjectEnded(b, now, lectureDurationMs);
+        if (isEndedA !== isEndedB) {
+          return isEndedA ? 1 : -1; // Push ended subjects to the bottom
+        }
+      }
+
+      // Default sort: by day, then time, then name
+      if (a.dayIndex !== b.dayIndex) return a.dayIndex - b.dayIndex;
+      if (a.time && b.time) return a.time.localeCompare(b.time);
+      return a.name.localeCompare(b.name);
+    });
+  }
+
   function getEmbedIcon(type) {
     switch (type?.toLowerCase()) {
       case 'slide': return 'slideshow';
@@ -1109,7 +1243,7 @@ function startWeekge() {
       const link = el('a', { className: linkClass, href: b.link || '#', target: '_blank', title: b.label }, [
         el('div', { className: iconCircleClass }, [
           el('span', { className: 'material-symbols-outlined', textContent: getEmbedIcon(b.type) }),
-          ...(isCustom ? [el('span', { className: 'label', textContent: b.label })] : []) ]) ]);
+          ...(isCustom ? [el('span', { className: 'label', textContent: b.label, style: 'white-space: nowrap;' })] : []) ]) ]);
       container.append(link);
     });
     return container;
@@ -1120,68 +1254,48 @@ function startWeekge() {
     // Clear only subject cards, not the time widget
     $$('#home-grid .subject-card').forEach(card => card.remove());
 
-    const todayDayIndex = new Date().getDay() === 0 ? 6 : new Date().getDay() - 1;
+    const now = new Date();
+    const todayDayIndex = now.getDay() === 0 ? 6 : now.getDay() - 1;
 
     const subjectsForWeek = selected.map(id => {
         const subj = cache[id];
         if (!subj) return null;
 
         const dayData = userDays?.[id] ?? { day: null, time: null };
+        const dayIndex = daysOfWeek.indexOf(dayData.day);
 
-        // --- NEW LOGIC: Determine which week's content to show ---
+        // --- LOGIC from indexold.html: Determine which week's content to show ---
         let weekContentToShow = selectedWeekNumber;
         const isCurrentWeekSelected = currentWeekData && selectedWeekNumber === currentWeekData.n;
+        let isUpcomingForContent = false;
 
-        if (isCurrentWeekSelected && dayData.day && dayData.time) {
-            const now = new Date();
-            const lectureDayIndex = daysOfWeek.indexOf(dayData.day);
-            const todayDayIndex = now.getDay() === 0 ? 6 : now.getDay() - 1;
-            const [lectureHour, lectureMinute] = dayData.time.split(':').map(Number);
-
-            // Check if the lecture for this week has already passed
-            if (lectureDayIndex < todayDayIndex || (lectureDayIndex === todayDayIndex && (now.getHours() > lectureHour || (now.getHours() === lectureHour && now.getMinutes() >= lectureMinute)))) {
-                // Lecture has passed, do nothing (show current selected week)
-            } else {
-                // Lecture is upcoming, show previous week's content if possible
-                if (weekContentToShow > 1) {
-                    weekContentToShow = selectedWeekNumber - 1;
-                }
-            }
+        // If it's the current week and the lecture has passed, show the current week's topic.
+        // Otherwise (if lecture is upcoming), show the previous week's topic.
+        if (isCurrentWeekSelected && dayIndex !== -1 && dayData.time) {
+            const [hours, minutes] = lectureDuration.split(':').map(Number);
+            const lectureDurationMs = (hours * 60 * 60 * 1000) + (minutes * 60 * 1000);
+            const ended = isSubjectEnded({ dayIndex, time: dayData.time }, now, lectureDurationMs);
+            
+            if (!ended && weekContentToShow > 1) { // If not ended (upcoming), show previous week
+                weekContentToShow = selectedWeekNumber - 1;
+                isUpcomingForContent = true;
+            } 
         }
-        const weekData = subj.weeks?.find(w => w.week === weekContentToShow - 1) || {};
+
+        const weekData = subj.weeks?.find(w => w.week === weekContentToShow) || {};
         return {
             ...subj,
-            // Pass along the specific week's data
             weekTopic: weekData.topic || '<i>თემა არ არის მითითებული</i>',
             weekType: weekData.type,
             weekButtons: weekData.buttons,
-            dayIndex: daysOfWeek.indexOf(dayData.day),
+            dayIndex: dayIndex,
             time: dayData.time,
-            isScheduled: dayData.day !== null
+            isScheduled: dayIndex !== -1,
+            isUpcomingForContent: isUpcomingForContent // Pass this flag
         };
     }).filter(Boolean);
 
-    // Sort subjects: scheduled first, then by upcoming, day, time, and name.
-    subjectsForWeek.sort((a, b) => {
-        const aScheduled = a.dayIndex > -1;
-        const bScheduled = b.dayIndex > -1;
-
-        if (aScheduled && !bScheduled) return -1;
-        if (!aScheduled && bScheduled) return 1;
-        if (!aScheduled && !bScheduled) return a.name.localeCompare(b.name);
-
-        // Both are scheduled
-        const isAUpcoming = a.dayIndex >= todayDayIndex;
-        const isBUpcoming = b.dayIndex >= todayDayIndex;
-
-        if (isAUpcoming !== isBUpcoming) return isAUpcoming ? -1 : 1;
-
-        if (a.dayIndex !== b.dayIndex) return a.dayIndex - b.dayIndex;
-
-        if (a.time && b.time) return a.time.localeCompare(b.time);
-        
-        return a.name.localeCompare(b.name); // final fallback
-    });
+    const sortedSubjects = sortByWeekdayTimeAndStatus(subjectsForWeek, selectedWeekNumber, currentWeekData, lectureDuration);
 
     if (subjectsForWeek.length === 0) {
         if (!$('.empty-placeholder')) {
@@ -1193,21 +1307,36 @@ function startWeekge() {
         if (placeholder) placeholder.remove();
     }
 
-    subjectsForWeek.forEach(subj => {
-      const isUpcoming = subj.isScheduled && subj.dayIndex >= todayDayIndex;
+    sortedSubjects.forEach(subj => {
+      let isUpcoming = false;
+      const isSelectedWeekCurrent = currentWeekData && selectedWeekNumber === currentWeekData.n;
+      const isSelectedWeekFuture = currentWeekData && selectedWeekNumber > currentWeekData.n;
+
+      // A subject is "upcoming" if it's in a future week,
+      // or if it's in the current week and its content is being shown from the previous week (meaning the lecture hasn't happened yet).
+      if (isSelectedWeekFuture || (isSelectedWeekCurrent && subj.isUpcomingForContent)) {
+          isUpcoming = true;
+      }
+
       const cardClasses = ['widget-card', 'subject-card'];
       if (isUpcoming) {
         cardClasses.push('is-upcoming');
       }
 
+      const titleEl = el('h3', { className: 'widget-title', textContent: subj.name });
+      if (subj.icon) {
+        titleEl.style.display = 'flex';
+        titleEl.style.alignItems = 'center';
+        titleEl.style.gap = '10px';
+        titleEl.prepend(el('span', { className: 'material-symbols-outlined', textContent: subj.icon, style: 'color: var(--text-muted-color);' }));
+      }
+
       const card = el('div', { className: cardClasses.join(' ') }, [
-        el('h3', { className: 'widget-title', textContent: subj.name }),
+        titleEl,
         el('p', { className: 'widget-subtitle', textContent: subj.weekType || 'ლექცია' }),
         el('div', { className: 'topic', innerHTML: subj.weekTopic }),
         createEmbedLinks(subj.weekButtons)
       ]);
-
-
       grid.append(card);
     });
   }
@@ -1260,8 +1389,15 @@ function startWeekge() {
     }
 
     subjectsWithGlobalButtons.forEach(subj => {
+      const titleEl = el('h3', { className: 'widget-title', textContent: subj.name });
+      if (subj.icon) {
+        titleEl.style.display = 'flex';
+        titleEl.style.alignItems = 'center';
+        titleEl.style.gap = '10px';
+        titleEl.prepend(el('span', { className: 'material-symbols-outlined', textContent: subj.icon, style: 'color: var(--text-muted-color);' }));
+      }
       const card = el('div', { className: 'widget-card' }, [
-        el('h3', { className: 'widget-title', textContent: subj.name }),
+        titleEl,
         createEmbedLinks(subj.globalButtons)
       ]);
       grid.append(card);
@@ -1288,7 +1424,7 @@ function startWeekge() {
 
     if (sortedSelected.length > 0) {
       const currentSubject = sortedSelected[mySubjectCarouselIndex];
-      carouselContent.append(createMySubjectWidget(currentSubject));
+      carouselContent.append(createMySubjectWidget(currentSubject, sortedSelected));
     } else {
       carouselContent.append(el('p', {className: 'empty-placeholder', style: 'padding: 20px;', textContent: 'საგნები არ არის არჩეული.'}));
     }
@@ -1305,10 +1441,8 @@ function startWeekge() {
       renderSettingsPage();
     };
 
-    const navButtonsContainer = el('div', { className: 'subject-carousel-nav-container' }, [prevBtn, nextBtn]);
-
-    mySubjectsColumn.append(carouselContent);
-    mySubjectsColumn.append(navButtonsContainer);
+    // The nav buttons are now appended inside createMySubjectWidget
+    const navButtonsContainer = el('div', { className: 'subject-carousel-nav-container' }, [prevBtn, nextBtn]);    
 
     // -- Subjects Catalog Widget --
     const searchInput = el('input', { id: 'catalog-search', type: 'search', placeholder: 'საგნის მოძებნა...' });
@@ -1361,6 +1495,9 @@ function startWeekge() {
       catalogContent
     ]);
 
+    // Append carousel content to its column
+    mySubjectsColumn.append(carouselContent);
+
     catalogColumn.append(catalogCard);
 
     // -- Lecture Duration Widget --
@@ -1375,10 +1512,10 @@ function startWeekge() {
     const logoutCard = createLogoutWidget();
     sideColumn.append(logoutCard);
 
-    grid.append(mySubjectsColumn, catalogColumn, sideColumn);
+    grid.append(mySubjectsColumn, catalogColumn, sideColumn);    
   }
 
-  function createMySubjectWidget(subj) {
+  function createMySubjectWidget(subj, sortedSelected) {
       const lectureStartTimes = ["09:00", "11:20", "13:40", "16:00", "18:20"];
       const dayAbbreviations = ["ორშ", "სამ", "ოთხ", "ხუთ", "პარ", "შაბ"];
       const currentDay = userDays[subj.id]?.day;
@@ -1435,14 +1572,30 @@ function startWeekge() {
         timeSelect,
       ]);
 
+      // Create nav buttons here to append them inside the widget
+      const prevBtn = el('button', { className: 'subject-carousel-nav-btn' }, [el('span', {className: 'material-symbols-outlined', textContent: 'arrow_back_ios_new'})]);
+      const nextBtn = el('button', { className: 'subject-carousel-nav-btn' }, [el('span', {className: 'material-symbols-outlined', textContent: 'arrow_forward_ios'})]);
+
+      prevBtn.onclick = () => {
+        mySubjectCarouselIndex = (mySubjectCarouselIndex - 1 + sortedSelected.length) % sortedSelected.length;
+        renderSettingsPage();
+      };
+      nextBtn.onclick = () => {
+        mySubjectCarouselIndex = (mySubjectCarouselIndex + 1) % sortedSelected.length;
+        renderSettingsPage();
+      };
+
+      const navContainer = el('div', { className: 'subject-carousel-nav-container' }, [prevBtn, nextBtn]);
+
       // This is now an item within a widget, not a full widget-card itself.
-      return el('div', { className: 'settings-item', style: 'flex-direction: column; align-items: stretch; padding: 15px; background: rgba(255,255,255,0.03); border-radius: 12px; gap: 15px; border-bottom: none;' }, [
+      return el('div', { className: 'settings-item', style: 'flex-direction: column; align-items: stretch; padding: 15px; background: rgba(255,255,255,0.03); border-radius: 12px; gap: 15px; border-bottom: none; flex-grow: 1; display: flex;' }, [
           el('div', {style: 'display: flex; justify-content: space-between; align-items: flex-start;'}, [
             el('h3', { className: 'widget-title', textContent: subj.name, style: 'font-size: 1.1rem;' }),
           removeBtn,
           ]),
           weekdayContainer,
-          timeSelect
+          timeSelect,
+          navContainer // Add the navigation container here
       ]);
   }
 
