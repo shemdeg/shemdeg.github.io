@@ -94,7 +94,7 @@
   #loadingOverlay .spinner {
     width: 80px; height: 80px; border: 8px solid rgba(255,255,255,0.1);
     border-top: 8px solid var(--accent-color); border-radius: 50%;
-    animation: spin 0.5s linear infinite;
+    animation: spin 0.1s linear infinite;
   }
   @keyframes spin { to { transform: rotate(360deg); } }
   #loadingOverlay p { margin-top: 20px; font-size: 1.1rem; color: var(--text-muted-color); }
@@ -139,6 +139,12 @@
     from { opacity: 0; transform: scale(0.98); }
     to { opacity: 1; transform: scale(1); }
   }
+
+  @keyframes pulse-opacity {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+  }
+
 
   /* Make main content fill height on live view */
   body[data-active-view="live-view"] {
@@ -216,6 +222,7 @@
   #live-time-card .time {
     font-size: 3.5rem;
     font-weight: 700;
+    animation: pulse-opacity 2.5s ease-in-out infinite;
   }
   #live-time-card .date {
     font-size: 1.2rem;
@@ -286,11 +293,13 @@
     font-size: 2.2rem;
     font-weight: 700;
     line-height: 1.1;
+    animation: pulse-opacity 2.5s ease-in-out infinite;
   }
   .subject-card.is-upcoming {
     background-color: color-mix(in srgb, var(--accent-color) 8%, var(--widget-color));
     border: 1px solid color-mix(in srgb, var(--accent-color) 20%, transparent);
-    animation: widget-fade-in 0.4s ease-out both;
+    /* Apply both the fade-in and the pulse animation */
+    animation: widget-fade-in 0.4s ease-out both, pulse-opacity 2.5s ease-in-out infinite 0.5s;
   }
 
   /* .subject-card { position: relative; } /* No longer needed */
@@ -450,6 +459,18 @@
     transition: border-color 0.2s ease;
     font-weight: 600;
     height: 50px;
+  }
+
+  .day-time-select {
+    background-color: rgba(255, 255, 255, 0.05);
+    color: #ffffff;
+    border-radius: 8px;
+    padding: 0px 8px;
+    font-family: "TBCContractica", sans-serif;
+    border: 1px solid transparent;
+    transition: border-color 0.2s ease;
+    font-weight: 600;
+    height: 80px;
   }
   .widget-card .day-time-select, .settings-item .day-time-select {
     background-color: color-mix(in srgb, var(--text-color) 5%, transparent);
@@ -654,12 +675,24 @@
     -ms-user-select: none; /* IE 10+ and Edge */
     user-select: none; /* Standard syntax */
     font-size: 36px;
-    transition: font-variation-settings 0.2s ease, color 0.2s ease;
-    font-variation-settings: 'FILL' 0, 'wght' 200, 'GRAD' 0;
+    transition: font-variation-settings 0.3s ease, color 0.3s ease;
+    font-variation-settings:
+    'FILL' 1,
+    'wght' 200,
+    'GRAD' 25,
+    'opsz' 24;
   }
   .nav-item.active {
     background-color: var(--accent-color);
     color: var(--text-on-accent-color); /* Active icon color */
+    animation: pulse-opacity 2.5s ease-in-out infinite;
+  }
+  .nav-item.active .material-symbols-outlined {
+    font-variation-settings:
+    'FILL' 1,
+    'wght' 200,
+    'GRAD' 200,
+    'opsz' 24;
   }
   #week-selector {
     width: 100%;
@@ -713,8 +746,12 @@
   }
 
   .week-button:hover { background-color: color-mix(in srgb, var(--widget-color) 80%, white 20%); }
-  .week-button.active { background-color: var(--accent-color); color: var(--text-on-accent-color); }
-  .week-button.is-current { border: 1px solid var(--accent-color); color: var(--accent-color); }
+  .week-button.active { 
+    background-color: var(--accent-color); color: var(--text-on-accent-color); 
+  }
+  .week-button.is-current { 
+    border: 1px solid var(--accent-color); color: var(--accent-color); animation: pulse-opacity 2.5s ease-in-out infinite; 
+  }
 
   .empty-placeholder {
     text-align: center;
@@ -758,6 +795,7 @@
   /* When the whole nav is the current week */
   .weeks-mobile-nav.is-current {
     background-color: var(--accent-color); /* Accent color for the current week */
+    animation: pulse-opacity 2.5s ease-in-out infinite;
   }
   .weeks-mobile-nav.is-current .current-week-display,
   .weeks-mobile-nav.is-current .nav-arrow {
@@ -877,7 +915,7 @@
 
 <!-- LOGIN OVERLAY -->
 <div id="login-overlay">
-  <h1>Shemdeg</h1>
+  <h1>SHEMDEG?</h1>
   <button id="signInBtn">
     <img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" alt="Google logo">
     Sign in with Google
@@ -1023,8 +1061,9 @@ function startWeekge() {
   const THEMES = {
     "Default": { bg: "#121212", widget: "#1E1E1E", text: "#fff", accent: "#fff", accentVariant: "#fff", textOnAccent: "#000000" },
     "Ocean": { bg: "#0F2027", widget: "#203A43", text: "#ffffff", accent: "#1488CC", accentVariant: "#2B32B2", textOnAccent: "#FFFFFF" },
+    "SciFi": { bg: "#0A0F1E", widget: "#1A243D", text: "#E0E8FF", accent: "#00D1FF", accentVariant: "#007B9A", textOnAccent: "#000000" },
     "Sunset": { bg: "#2C0A1E", widget: "#4F1C3A", text: "#ffffff", accent: "#FF8C61", accentVariant: "#C83C66", textOnAccent: "#000000" },
-    "Forest": { bg: "#1A2922", widget: "#2E463A", text: "#ffffff", accent: "#56C271", accentVariant: "#237A41", textOnAccent: "#000000" },
+    "Forest": { bg: "#2C3E36", widget: "#3E564B", text: "#F0F5F2", accent: "#6AEB8E", accentVariant: "#4CAF50", textOnAccent: "#000000" },
     "Light": { bg: "#F7F7F7", widget: "#FFFFFF", text: "#000000", accent: "#000000", accentVariant: "#333333", textOnAccent: "#FFFFFF" },
     "Latte": { bg: "#ffe3d3", widget: "#fff8f3", text: "#422D24", accent: "#ac5a3a", accentVariant: "#5D4037", textOnAccent: "#FFFFFF" },
   };
@@ -1325,8 +1364,8 @@ function startWeekge() {
         }
     }
 
-    if (totalQuizzes === 0) {
-        return { status: 'none', count: 0 }; // No quizzes this week.
+    if (totalQuizzes === 0) { // If a past week has no quizzes, consider it completed.
+        return { status: 'completed', count: 0 };
     }
 
     if (missedCount > 0) {
