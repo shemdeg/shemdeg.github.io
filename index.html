@@ -464,10 +464,16 @@
   .subject-carousel-nav-btn {
     background: #ffffff10;
     border: none; color: var(--text-color); border-radius: 12px;
-    height: 40px; cursor: pointer; display: grid; place-items: center;
+    height: 60px; cursor: pointer; display: grid; place-items: center;
     flex: 1; /* Make buttons grow to fill space */
     transition: background-color 0.2s ease;
     padding: 4px;
+  }
+
+  .subject-carousel-nav-btn:hover {
+    background: #ffffff20;
+  }
+  .subject-carousel-nav-btn.active {
   }
   .settings-widget-content { flex-grow: 1; min-height: 0; overflow-y: auto; padding-right: 5px; }
   .settings-widget-content::-webkit-scrollbar { width: 6px; }
