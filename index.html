@@ -3,13 +3,13 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Shemdeg</title>
 
+<meta name="description" content="shemdeg.github.io">
+<meta name="theme-color" content="#0B1216">
 <meta name="apple-mobile-web-app-capable" content="yes" /> 
- <title>Shemdeg</title>
+<link rel="icon" href="/icons/shicon.png">
 
-  <meta name="description" content="Weekge (Week.ge) — უნივერსიტეტის საგნების და სილაბუსების პლატფორმა. ნახე შენი საგნები კვირების მიხედვით და იოლი ნავიგაციით.">
-  <meta name="theme-color" content="#0B1216">
-  <link rel="icon" href="/icons/shicon.png">
 
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet" />
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Georgian:wdth,wght@62.5..100,100..900&display=swap" rel="stylesheet">
@@ -41,16 +41,14 @@
     background-color: var(--bg-color);
     color: var(--text-color);
     font-family: var(--font-family);
-    display: flex;
-    flex-direction: column;
-    height: 100vh;
-    overflow: hidden;
-    padding: 20px 20px 100px 20px; /* Padding for content, space for bottom nav */
+    padding: 20px 20px 120px 20px; /* Padding for content, space for bottom nav */
   }
 
   /* === LOADER === */
   #loadingOverlay {
-    position: fixed; inset: 0; z-index: 9999;
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
     background: var(--bg-color); display: flex; flex-direction: column;
     align-items: center; justify-content: center;
     transition: opacity .3s ease, visibility .3s ease;
@@ -79,6 +77,7 @@
   /* === HEADER === */
   header {
     padding: 0 10px 20px 10px;
+    display: none; /* Hide header as requested */
   }
   header h1 {
     font-size: 2rem;
@@ -86,15 +85,6 @@
     color: var(--text-color);
   }
 
-  /* === MAIN CONTENT & VIEWS === */
-  .main-content {
-    flex: 1;
-    overflow-y: auto;
-    padding-right: 5px; /* space for scrollbar */
-  }
-  .main-content::-webkit-scrollbar { width: 8px; }
-  .main-content::-webkit-scrollbar-thumb { background: var(--widget-color); border-radius: 4px; }
-  .main-content::-webkit-scrollbar-track { background: transparent; }
 
   .view {
     display: none;
@@ -115,27 +105,12 @@
   }
   
   /* === VIEW-SPECIFIC GRID STYLES === */
-  #live-view .widget-grid,
-  #resources-view .widget-grid,
-  #settings-view .widget-grid {
-    height: 100%;
-  }
-
   #home-grid {
     grid-template-columns: repeat(5, 1fr);
-    grid-template-rows: repeat(2, 1fr); /* Enforce a 5x2 grid */
-    height: calc(100% - 70px); /* Adjust height to account for the weeks bar */    
-    min-height: 0; /* Prevent grid from growing beyond its container */
-  }
-  
-  #resources-grid {
-    grid-template-columns: repeat(4, 1fr); /* Always 4 columns on desktop */
-    align-content: start; /* Align items to the start of the grid */
   }
 
-  /* Make the last item in the resources grid span full width if it's on a new row by itself */
-  #resources-grid .widget-card:last-child:nth-child(4n - 3) {
-    grid-column: 1 / -1;
+  #resources-grid {
+    grid-template-columns: repeat(5, 1fr);
   }
 
   /* === WIDGET CARD STYLING === */
@@ -257,8 +232,6 @@
   /* === SETTINGS PAGE === */
   #settings-grid {
     grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-    height: 100%;
-    min-height: 0;
     align-content: start;
   }
   @media screen and (min-width: 1024px) {
@@ -270,7 +243,6 @@
       flex-direction: column;
       gap: 20px;
       min-height: 0; /* Prevent flexbox overflow */
-      height: 100%; /* Make columns fill the grid cell height */
     }
     .settings-column > .widget-card {
       flex-grow: 1; /* Allow widgets to grow to fill the column */
@@ -438,10 +410,6 @@
     height: 20px;
     border-radius: 50%;
   }
-
-  #settings-view {
-    height: 100%;
-  }
   #settings-view .save-button {
     background-color: var(--accent-color);
     color: var(--bg-color);
@@ -471,7 +439,7 @@
   /* === BOTTOM NAVIGATION === */
   .bottom-nav {
     position: fixed;
-    bottom: 20px;
+    bottom: 10px;
     left: 50%;
     transform: translateX(-50%);
     background-color: var(--widget-color);
@@ -496,16 +464,16 @@
     -webkit-user-select: none; /* Safari */
     -ms-user-select: none; /* IE 10+ and Edge */
     user-select: none; /* Standard syntax */
-    font-size: 28px;
+    font-size: 32px;
     transition: font-variation-settings 0.2s ease, color 0.2s ease;
-    font-variation-settings: 'FILL' 0;
+    font-variation-settings: 'FILL' 0, 'wght' 200, 'GRAD' 0;
   }
   .nav-item.active {
     background-color: var(--accent-variant-color);
     color: #FFFFFF; /* Active icon color */
   }
   .nav-item.active .material-symbols-outlined {
-    font-variation-settings: 'FILL' 1;
+    font-variation-settings: 'FILL' 1, 'wght' 200, 'GRAD' 0;
   }
   .nav-item.active {
     background-color: var(--accent-variant-color);
@@ -576,9 +544,13 @@
     align-items: center;
     justify-content: space-between;
     padding: 10px;
-    background-color: var(--widget-color);
-    border-radius: var(--border-radius);
+    background-color: var(--widget-color);    
+    border-radius: 999px; /* Full round edges */
+    width: fit-content; /* Shrink to content */
+    margin: 0 auto; /* Center horizontally */
+    transition: background-color 0.2s ease;
   }
+
   .weeks-mobile-nav .nav-arrow {
     background: transparent;
     border: none;
@@ -592,6 +564,20 @@
   .weeks-mobile-nav .current-week-display {
     font-weight: 600;
     font-size: 1rem;
+    background-color: transparent; /* Neutral background by default */
+    color: var(--text-color);
+    padding: 5px 15px;
+    border-radius: 999px;
+    transition: background-color 0.2s ease, color 0.2s ease;
+  }
+  /* When the whole nav is the current week */
+  .weeks-mobile-nav.is-current {
+    background-color: var(--accent-color); /* Accent color for the current week */
+  }
+  .weeks-mobile-nav.is-current .current-week-display,
+  .weeks-mobile-nav.is-current .nav-arrow {
+    color: var(--text-on-accent-color);
+    background-color: transparent; /* Ensure children are transparent */
   }
 
   @media screen and (max-width: 768px) {
@@ -601,10 +587,11 @@
     .widget-grid {
       grid-template-columns: 1fr;
     }
-    #home-grid {
+    #home-grid, #resources-grid {
       grid-template-rows: none; /* Remove fixed rows for mobile */
       grid-template-columns: 1fr; /* Ensure single column layout */
     }
+
     #home-grid, #resources-grid, #settings-grid {
       height: auto; /* Allow grids to grow with content on mobile */
     }
@@ -616,12 +603,14 @@
     }
     .weeks-mobile-nav {
       display: flex; /* Show mobile weeks nav */
+      width: 200px;
+      padding: 6px 10px;
     }
     header h1 {
       font-size: 1.8rem;
     }
     .bottom-nav {
-      bottom: 15px;
+      bottom: 10px;
     }
     .nav-item {
       width: 50px;
@@ -643,6 +632,11 @@
 
 <!-- LOADER -->
 <div id="loadingOverlay"><div class="spinner"></div><p>იტვირთება</p></div>
+
+<!-- FULLSCREEN WEEK SELECTOR -->
+<div id="week-selector-overlay">
+  <div class="week-selector-grid"></div>
+</div>
 
 <header>
   <h1 id="page-title">მთავარი</h1>
@@ -844,7 +838,16 @@ function startWeekge() {
       await auth.signInWithPopup(provider);
     } catch (err) {
       console.error("Sign-in error:", err);
-      alert("Sign-in failed. Please try again.");
+      let userMessage = "Sign-in failed. Please try again.";
+      if (err.code === 'auth/popup-closed-by-user') {
+        // Don't show a harsh error if the user simply closed the window.
+        return; 
+      } else if (err.code === 'auth/popup-blocked') {
+        userMessage = "Sign-in popup was blocked by the browser. Please allow popups for this site and try again.";
+      } else {
+        userMessage = `Sign-in failed: ${err.message}`;
+      }
+      alert(userMessage);
     }
   };
 
@@ -952,6 +955,11 @@ function startWeekge() {
     const container = $('#weeks-bar-container');
     container.innerHTML = '';
 
+    // --- Fullscreen Overlay Logic ---
+    const weekSelectorOverlay = $('#week-selector-overlay');
+    const weekSelectorGrid = $('.week-selector-grid');
+    weekSelectorOverlay.onclick = (e) => { if (e.target === weekSelectorOverlay) weekSelectorOverlay.classList.remove('visible'); };
+
     // --- Mobile Navigator ---
     const prevWeek = () => {
         const currentIndex = SEMESTER_WEEKS.findIndex(w => w.n === selectedWeekNumber);
@@ -970,41 +978,16 @@ function startWeekge() {
         }
     };
     const mobileNav = el('div', { className: 'weeks-mobile-nav' });
+    const weekDisplay = el('div', { className: 'current-week-display', textContent: `კვირა ${selectedWeekNumber}` });
+
+    if (currentWeekData && selectedWeekNumber === currentWeekData.n) {
+      mobileNav.classList.add('is-current');
+    }
+
     mobileNav.append(el('button', { className: 'nav-arrow', onclick: prevWeek, disabled: selectedWeekNumber === 1 }, [el('span', {className: 'material-symbols-outlined', textContent: 'arrow_back_ios'})]));
-    mobileNav.append(el('div', { className: 'current-week-display', textContent: `კვირა ${selectedWeekNumber}` }));
+    mobileNav.append(weekDisplay);
     mobileNav.append(el('button', { className: 'nav-arrow', onclick: nextWeek, disabled: selectedWeekNumber === SEMESTER_WEEKS.length }, [el('span', {className: 'material-symbols-outlined', textContent: 'arrow_forward_ios'})]));
     container.append(mobileNav);
-
-    // --- Desktop Chooser (only render on non-mobile screens) ---
-    // We check this in JS to avoid rendering the scrollable element on mobile at all.
-    if (window.matchMedia("(min-width: 769px)").matches) {
-      const chooser = el('div', { className: 'weeks-chooser' });
-  
-      SEMESTER_WEEKS.forEach(w => {
-        const isCurrent = currentWeekData && w.n === currentWeekData.n;
-        const button = el('button', {
-          className: 'week-button',
-          textContent: `კვირა ${w.n}`
-        });
-  
-        button.dataset.week = w.n;
-  
-        if (w.n === selectedWeekNumber) {
-          button.classList.add('active');
-        }
-        if (isCurrent) {
-          button.classList.add('is-current');
-        }
-  
-        button.onclick = () => {
-          selectedWeekNumber = w.n;
-          renderHomePage();
-          renderWeeksBar(); // Re-render to update active state
-        };
-        chooser.append(button);
-      });
-      container.append(chooser);
-    }
   }
 
   /* === RENDERING FUNCTIONS === */
@@ -1027,17 +1010,10 @@ function startWeekge() {
       const iconCircleClass = isCustom ? 'icon-circle is-custom' : 'icon-circle';
       const linkClass = isCustom ? 'embed-link is-custom' : 'embed-link';
 
-      const link = el('a', {
-        className: linkClass,
-        href: b.link || '#',
-        target: '_blank',
-        title: b.label
-      }, [
+      const link = el('a', { className: linkClass, href: b.link || '#', target: '_blank', title: b.label }, [
         el('div', { className: iconCircleClass }, [
           el('span', { className: 'material-symbols-outlined', textContent: getEmbedIcon(b.type) }),
-          ...(isCustom ? [el('span', { className: 'label', textContent: b.label })] : [])
-        ])
-      ]);
+          ...(isCustom ? [el('span', { className: 'label', textContent: b.label })] : []) ]) ]);
       container.append(link);
     });
     return container;
