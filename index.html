@@ -688,6 +688,7 @@
     width: 100%;
     overflow-x: auto;
     scrollbar-width: none;
+    padding-top: 8px; /* Add space for notification dots */
     padding-bottom: 5px;
   }
   .weeks-chooser::-webkit-scrollbar { display: none; }
@@ -766,17 +767,36 @@
 
   .missed-quiz-dot {
     position: absolute;
-    top: -2px;
-    right: -2px;
+    top: -6px;
+    right: -8px;
     background-color: #ff3e3e;
     color: white;
     border-radius: 50%;
-    width: 20px;
-    height: 20px;
+    width: 25px;
+    height: 25px;
     display: grid;
     place-items: center;
-    font-size: 0.75rem;
-    font-weight: 700;
+    font-size: 0.3rem;
+    font-weight: 500;
+    padding-top: 2px;
+    line-height: 0;
+  }
+
+  .completed-quiz-dot {
+    position: absolute;
+    top: -6px;
+    right: -8px;
+    background-color: var(--accent-color);
+    color: var(--text-on-accent-color);
+    border-radius: 50%;
+    width: 25px;
+    height: 25px;
+    display: grid;
+    place-items: center;
+    font-size: 1.2rem; /* Larger for the checkmark */
+    font-weight: 500;
+    padding-top: 2px;
+    line-height: 0;
   }
 
   @media screen and (max-width: 1000px) {
@@ -1275,34 +1295,43 @@ function startWeekge() {
     $('#live-time-card').after(summaryCard);
   }
 
-  function countMissedQuizzesForWeek(weekNumber) {
+  function checkWeekCompletionStatus(weekNumber) {
     const currentWeekNum = currentWeekData ? currentWeekData.n : 1;
     if (weekNumber >= currentWeekNum) {
-        return 0; // Missed quizzes can only be in past weeks.
+        return { status: 'none', count: 0 }; // Dots only for past weeks.
     }
 
+    let totalQuizzes = 0;
     let missedCount = 0;
-    // Iterate over selected subjects
+
     for (const subjId of selected) {
         const subj = cache[subjId];
         if (!subj) continue;
 
-        // Find the specific week data for this subject to see if it has a quiz
         const subjectWeekData = subj.weeks?.find(w => w.week === weekNumber);
         const weekType = subjectWeekData?.type;
 
-        // Check if this week has a quiz-like activity
         if (['ლექცია (ქვიზი)', 'შუალედური', 'პრეზენტაცია'].includes(weekType)) {
+            totalQuizzes++;
             const quizKey = `${subjId}_${weekNumber}`;
             const isCompleted = quizCompletion[quizKey] === true;
 
-            // If it's a past quiz and not completed, increment the count
             if (!isCompleted) {
                 missedCount++;
             }
         }
     }
-    return missedCount;
+
+    if (totalQuizzes === 0) {
+        return { status: 'none', count: 0 }; // No quizzes this week.
+    }
+
+    if (missedCount > 0) {
+        return { status: 'missed', count: missedCount };
+    }
+
+    // If totalQuizzes > 0 and missedCount is 0, it means all are completed.
+    return { status: 'completed', count: totalQuizzes };
   }
 
   /* === WEEKS BAR / SELECTOR === */
@@ -1317,11 +1346,17 @@ function startWeekge() {
       if (week.n === selectedWeekNumber) btn.classList.add('active');
       if (currentWeekData && week.n === currentWeekData.n) btn.classList.add('is-current');
       
-      const missedCount = countMissedQuizzesForWeek(week.n);
-      if (missedCount > 0) {
+      const weekStatus = checkWeekCompletionStatus(week.n);
+      if (weekStatus.status === 'missed') {
         btn.style.position = 'relative'; // Needed for absolute positioning of the dot
-        btn.append(el('span', { className: 'missed-quiz-dot', textContent: missedCount }));
+        btn.append(el('span', { className: 'missed-quiz-dot', textContent: weekStatus.count }));
+      } else if (weekStatus.status === 'completed') {
+        btn.style.position = 'relative';
+        btn.append(el('span', { className: 'completed-quiz-dot' }, [
+            el('span', { className: 'material-symbols-outlined', textContent: 'check', style: 'font-size: 1.2rem;' })
+        ]));
       }
+
       btn.onclick = () => {
         selectedWeekNumber = week.n;
         renderHomePage();
@@ -1374,11 +1409,15 @@ function startWeekge() {
     if (currentWeekData && selectedWeekNumber === currentWeekData.n) {
       mobileNav.classList.add('is-current');
     }
-    const missedCountMobile = countMissedQuizzesForWeek(selectedWeekNumber);
-    if (missedCountMobile > 0) {
-        // The mobile nav already has position: relative from CSS
-        mobileNav.append(el('span', { className: 'missed-quiz-dot', textContent: missedCountMobile }));
+    const mobileWeekStatus = checkWeekCompletionStatus(selectedWeekNumber);
+    if (mobileWeekStatus.status === 'missed') {
+        mobileNav.append(el('span', { className: 'missed-quiz-dot', textContent: mobileWeekStatus.count }));
+    } else if (mobileWeekStatus.status === 'completed') {
+        mobileNav.append(el('span', { className: 'completed-quiz-dot' }, [
+            el('span', { className: 'material-symbols-outlined', textContent: 'check', style: 'font-size: 1.2rem;' })
+        ]));
     }
+
     prevBtn.onclick = prevWeek;
     nextBtn.onclick = nextWeek;
     prevBtn.disabled = selectedWeekNumber === 1;
