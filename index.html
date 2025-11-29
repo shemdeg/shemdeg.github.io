@@ -49,7 +49,7 @@
     --widget-color: #1E1E1E;
     --text-color: #E0E0E0;
     --text-muted-color: #8A8A8A;
-    --accent-color: #BB86FC;
+    --accent-color: #fff;
     --accent-variant-color: #3700B3;
     --text-on-accent-color: #000000;
     --border-radius: 16px;
@@ -216,22 +216,22 @@
   }
 
   .quiz-check-btn {
-    border-radius: 50%;
-    background-color: rgba(255,255,255,0.08);
-    border: 1px solid transparent;
-    color: var(--text-muted-color);
+    background-color: var(--accent-color);
+    color: var(--text-on-accent-color);
     cursor: pointer;
     display: grid;
     place-items: center;
     transition: all 0.2s ease;
-    width: 50px; /* Match embed link icon circle */
-    height: 50px; /* Match embed link icon circle */
-    align-self: center; /* Align with other icons */
-    margin-left: auto; /* Push to the right of other links */
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    border: 1px solid transparent;
+    align-self: center;
+    margin-left: auto;
   }
   .quiz-check-btn.checked {
-    background-color: var(--accent-color);
-    color: var(--text-on-accent-color);
+    background-color: rgba(255,255,255,0.08);
+    color: var(--text-muted-color);
   }
 
   #weeks-left-card {
@@ -247,6 +247,31 @@
   #weeks-left-card .label {
     font-size: 1.2rem;
     color: var(--text-muted-color);
+  }
+  #summary-widget {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 1fr 1fr;
+    gap: 20px;
+    padding: 20px;
+  }
+  .summary-item {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    padding: 0;
+    gap: 0;
+  }
+  .summary-label {
+    font-size: 1rem;
+    color: var(--text-muted-color);
+  }
+  .summary-value {
+    font-size: 2.2rem;
+    font-weight: 700;
+    line-height: 1.1;
   }
   .subject-card.is-upcoming {
     background-color: color-mix(in srgb, var(--accent-color) 8%, var(--widget-color));
@@ -1058,8 +1083,7 @@ function startWeekge() {
     renderSettingsPage();
     
     initLiveTime();
-    initWeeksLeftWidget();
-    initQuizCounterWidget(); // Add this call
+    initSummaryWidget();
     initNavigation();
   }
 
@@ -1155,47 +1179,71 @@ function startWeekge() {
     setInterval(updateTime, 1000);
   }
 
-  function initWeeksLeftWidget() {
+  function initSummaryWidget() {
+    // Remove old widgets if they exist
+    $('#weeks-left-card')?.remove();
+    $('#quiz-counter-card')?.remove();
+    $('#summary-widget')?.remove();
+
+    // 1. Weeks until exams
     const lastWeekNumber = SEMESTER_WEEKS[SEMESTER_WEEKS.length - 1].n;
+    const weeksLeft = (!currentWeekData || currentWeekData.n > lastWeekNumber) ? 0 : (lastWeekNumber - currentWeekData.n) + 1;
 
-    if (!currentWeekData || currentWeekData.n > lastWeekNumber) {
-      // Don't show the widget if we're past the last week or have no data.
-      return;
-    }
-
-    const weeksLeft = (lastWeekNumber - currentWeekData.n) + 1;
-    const labelText = weeksLeft === 1 ? 'კვირა გამოცდებამდე' : 'კვირა გამოცდებამდე';
-
-    const numberEl = el('div', { className: 'number', textContent: weeksLeft });
-    const labelEl = el('div', { className: 'label', textContent: labelText });
-    const weeksLeftCard = el('div', { 
-        id: 'weeks-left-card', 
-        className: 'widget-card' 
-    }, [numberEl, labelEl]);
-
-    $('#live-time-card').after(weeksLeftCard);
-  }
-
-  function initQuizCounterWidget() {
-    const existingCard = $('#quiz-counter-card');
-    if (existingCard) existingCard.remove();
-
+    // 2. Quiz stats
     const completedQuizzes = Object.values(quizCompletion).filter(Boolean).length;
+    let totalQuizzes = 0;
+    let missedQuizzes = 0;
+    const now = new Date();
+    const [hours, minutes] = lectureDuration.split(':').map(Number);
+    const lectureDurationMs = (hours * 60 * 60 * 1000) + (minutes * 60 * 1000);
+    
+    selected.forEach(subjId => {
+      const subj = cache[subjId];
+      if (subj && subj.weeks) {
+        subj.weeks.forEach(week => {
+          if (week.type === 'ლექცია (ქვიზი)' || week.type === 'შუალედური') {
+            totalQuizzes++;
 
-    const numberEl = el('div', { className: 'number', textContent: completedQuizzes });
-    const labelEl = el('div', { className: 'label', textContent: 'ჩაბარებული ქვიზი' });
-    const quizCounterCard = el('div', { 
-        id: 'quiz-counter-card', 
+            const quizKey = `${subjId}_${week.week + 1}`;
+            const isCompleted = quizCompletion[quizKey] === true;
+
+            // Check if missed
+            const weekInfo = weekDates.find(wd => wd.n === (week.week + 1));
+            if (!isCompleted && weekInfo && weekInfo.end < todayISO()) {
+                missedQuizzes++;
+            }
+          }
+        });
+      }
+    });
+    const remainingQuizzes = totalQuizzes - completedQuizzes;
+
+    // --- Create Widget ---
+    const createStatItem = (label, value, valueStyle = {}) => {
+        const valueEl = el('div', { className: 'summary-value', textContent: value });
+        Object.assign(valueEl.style, valueStyle);
+        return el('div', { className: 'summary-item' }, [
+            valueEl,
+            el('div', { className: 'summary-label', textContent: label })
+        ]);
+    };
+
+    const completedStyle = { color: '#4fff38' }; // Green
+    const missedStyle = missedQuizzes > 0 ? { color: '#ff3c2e' } : {}; // Red if > 0
+
+    const summaryCard = el('div', { 
+        id: 'summary-widget', 
         className: 'widget-card' 
-    }, [numberEl, labelEl]);
+    }, [
+        createStatItem('კვირა გამოცდამდე', weeksLeft),
+        createStatItem('ჩაბარებული ქვიზი', completedQuizzes, completedStyle),
+        createStatItem('ჩასაბარებელი ქვიზი', remainingQuizzes, {}),
+        createStatItem('გამოტოვებული ქვიზი', missedQuizzes, missedStyle)
+    ]);
 
-    // Style it similarly to the weeks-left-card
-    quizCounterCard.style.backgroundColor = 'color-mix(in srgb, var(--accent-color) 8%, var(--widget-color))';
-    quizCounterCard.style.border = '1px solid color-mix(in srgb, var(--accent-color) 20%, transparent)';
-    quizCounterCard.style.textAlign = 'center';
-    quizCounterCard.style.justifyContent = 'center';
+    // summaryCard.style.gap = '10px'; // This is now handled by CSS
 
-    $('#weeks-left-card').after(quizCounterCard);
+    $('#live-time-card').after(summaryCard);
   }
 
   /* === WEEKS BAR / SELECTOR === */
@@ -1298,23 +1346,21 @@ function startWeekge() {
 
     const isSelectedWeekCurrent = currentWeekData && (selectedWeekNumber === currentWeekData.n);
 
-    // Check if all subjects in the current week have ended
-    const allEnded = isSelectedWeekCurrent && subjs.every(s => isSubjectEnded(s, now, lectureDurationMs));
-
     return subjs.sort((a, b) => {
-      // Only sort by "ended" status if it's the current week AND not all subjects have ended yet.
-      if (isSelectedWeekCurrent && !allEnded) {
+      // For the current week, sort by "ended" status first.
+      if (isSelectedWeekCurrent) {
         const isEndedA = isSubjectEnded(a, now, lectureDurationMs);
         const isEndedB = isSubjectEnded(b, now, lectureDurationMs);
         if (isEndedA !== isEndedB) {
-          return isEndedA ? 1 : -1; // Push ended subjects to the bottom
+          return isEndedA ? 1 : -1; // Ended subjects go to the bottom.
         }
       }
 
-      // Default sort: by day, then time, then name
+      // For all weeks (or for subjects with the same "ended" status on the current week),
+      // sort by day, then time.
       if (a.dayIndex !== b.dayIndex) return a.dayIndex - b.dayIndex;
       if (a.time && b.time) return a.time.localeCompare(b.time);
-      return a.name.localeCompare(b.name);
+      return a.name.localeCompare(b.name); // Fallback to name sort.
     });
   }
 
@@ -1430,20 +1476,20 @@ function startWeekge() {
       const embedLinksContainer = createEmbedLinks(subj.weekButtons);
 
       // Check for quiz and add button to the embed links container
-      if (subj.weekType === 'ლექცია (ქვიზი)') {
+      if (subj.weekType === 'ლექცია (ქვიზი)' || subj.weekType === 'შუალედური') {
         const quizKey = `${subj.id}_${selectedWeekNumber}`;
         const isChecked = quizCompletion[quizKey] === true;
 
         const quizCheckButton = el('button', { className: 'quiz-check-btn', title: 'ქვიზი დაწერილია' });
-        quizCheckButton.append(el('span', { className: 'material-symbols-outlined', textContent: 'check' }));
         if (isChecked) {
           quizCheckButton.classList.add('checked');
         }
+        quizCheckButton.append(el('span', { className: 'material-symbols-outlined', textContent: 'check' }));
 
         quizCheckButton.onclick = (e) => {
-          const newState = !quizCheckButton.classList.toggle('checked');
+          const newState = quizCheckButton.classList.toggle('checked');
           saveQuizStatus(subj.id, selectedWeekNumber, newState);
-          initQuizCounterWidget(); // Update counter on click
+          initSummaryWidget(); // Update summary widget on click
         };
         embedLinksContainer.append(quizCheckButton);
       }
@@ -1633,7 +1679,7 @@ function startWeekge() {
   }
 
   function createMySubjectWidget(subj, sortedSelected) {
-      const lectureStartTimes = ["09:00", "11:20", "13:40", "16:00", "18:20"];
+      const lectureStartTimes = ["09:00", "11:20", "13:40", "16:00", "18:20"].sort();
       const dayAbbreviations = ["ორშ", "სამ", "ოთხ", "ხუთ", "პარ", "შაბ"];
       const currentDay = userDays[subj.id]?.day;
 
