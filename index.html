@@ -987,6 +987,7 @@ function startWeekge() {
     "Sunset": { bg: "#2C0A1E", widget: "#4F1C3A", text: "#ffffff", accent: "#FF8C61", accentVariant: "#C83C66", textOnAccent: "#000000" },
     "Forest": { bg: "#1A2922", widget: "#2E463A", text: "#ffffff", accent: "#56C271", accentVariant: "#237A41", textOnAccent: "#000000" },
     "Light": { bg: "#F7F7F7", widget: "#FFFFFF", text: "#000000", accent: "#000000", accentVariant: "#333333", textOnAccent: "#FFFFFF" },
+    "Latte": { bg: "#ffe3d3", widget: "#fff8f3", text: "#422D24", accent: "#ac5a3a", accentVariant: "#5D4037", textOnAccent: "#FFFFFF" },
   };
 
   function applyTheme(themeName) {
@@ -1194,10 +1195,6 @@ function startWeekge() {
     $('#quiz-counter-card')?.remove();
     $('#summary-widget')?.remove();
 
-    // 1. Weeks until exams
-    const lastWeekNumber = SEMESTER_WEEKS[SEMESTER_WEEKS.length - 1].n;
-    const weeksLeft = (!currentWeekData || currentWeekData.n > lastWeekNumber) ? 0 : (lastWeekNumber - currentWeekData.n) + 1;
-
     // 2. Quiz stats
     let completedQuizzes = 0;
     let missedQuizzes = 0;
@@ -1241,14 +1238,13 @@ function startWeekge() {
         ]);
     };
 
-    const completedStyle = { color: '#4fff38' }; // Green
+    const completedStyle = { color: '#8c8c8c90' }; // Green
     const missedStyle = missedQuizzes > 0 ? { color: '#ff3c2e' } : {}; // Red if > 0
 
     const summaryCard = el('div', { 
         id: 'summary-widget', 
         className: 'widget-card' 
     }, [
-        createStatItem('კვირა გამოცდამდე', weeksLeft),
         createStatItem('ჩასაბარებელი ქვიზი', remainingQuizzes, {}),
         createStatItem('ჩაბარებული ქვიზი', completedQuizzes, completedStyle),
         createStatItem('აღსადგენი ქვიზი', missedQuizzes, missedStyle),
@@ -1491,7 +1487,7 @@ function startWeekge() {
 
       // Check for quiz and add button to the embed links container
       if (subj.weekType === 'ლექცია (ქვიზი)' || subj.weekType === 'შუალედური' || subj.weekType === 'პრეზენტაცია') {
-        const quizKey = `${subj.id}_${selectedWeekNumber + 1}`;
+        const quizKey = `${subj.id}_${selectedWeekNumber}`;
         const isChecked = quizCompletion[quizKey] === true;
         const isPastWeek = currentWeekData && selectedWeekNumber < currentWeekData.n;
 
@@ -1517,7 +1513,7 @@ function startWeekge() {
           if (isPastWeek && !quizCheckButton.classList.contains('checked')) {
             quizCheckButton.classList.add('is-missed');
           }
-          saveQuizStatus(subj.id, selectedWeekNumber + 1, newState);
+          saveQuizStatus(subj.id, selectedWeekNumber, newState);
           initSummaryWidget(); // Update summary widget on click
         };
         embedLinksContainer.append(quizCheckButton);
