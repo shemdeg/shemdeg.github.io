@@ -33,6 +33,11 @@
     padding: 0;
   }
 
+  /* Disable double-tap to zoom on interactive elements for a faster UI response */
+  button, .nav-item, .week-button, .theme-option {
+    touch-action: manipulation;
+  }
+
   html {
     color-scheme: dark;
   }
@@ -298,14 +303,14 @@
     font-weight: 600;
   }
   .widget-card .day-time-select {
-    background-color: var(--accent-color);
-    color: var(--text-on-accent-color);
+    background-color: rgba(255,255,255,0.05);
+    color: var(--text-color);
     -webkit-appearance: none;
     -moz-appearance: none;
     appearance: none;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='white' class='bi bi-chevron-down' viewBox='0 0 16 16'%3E%3Cpath fill-rule='evenodd' d='M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z'/%3E%3C/svg%3E");
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%23E0E0E0' class='bi bi-chevron-down' viewBox='0 0 16 16'%3E%3Cpath fill-rule='evenodd' d='M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z'/%3E%3C/svg%3E");
     background-repeat: no-repeat;
-    background-position: right 12px center;
+    background-position: right 16px center;
     background-size: 1em;
   }
   .day-time-select option { background-color: var(--widget-color); color: var(--text-color); }
@@ -340,10 +345,10 @@
   }
   .weekday-chooser {
     display: flex;
-    gap: 5px;
-    justify-content: flex-end;
-    flex-wrap: wrap;
-    flex-grow: 1;
+    gap: 8px;
+    justify-content: space-between;
+    width: 100%;
+    margin-top: 10px;
   }
   .weekday-btn {
     width: 42px;
@@ -358,6 +363,7 @@
     font-size: 0.8rem;
     font-weight: 600;
     transition: all 0.2s ease;
+    flex: 1;
   }
   .weekday-btn:hover {
     background-color: rgba(255,255,255,0.1);
@@ -365,6 +371,21 @@
   .weekday-btn.active {
     background-color: var(--accent-color);
     color: var(--bg-color);
+  }
+  .subject-carousel-content {
+    width: 100%;
+  }
+  .subject-carousel-nav-container {
+    display: flex;
+    justify-content: space-between; /* Pushes arrows to the sides */
+    margin-top: 10px;
+  }
+  .subject-carousel-nav-btn {
+    background: transparent;
+    border: none; color: var(--text-color); border-radius: 12px;
+    width: 40px; height: 40px; cursor: pointer; display: grid; place-items: center;
+    flex-shrink: 0;
+    transition: background-color 0.2s ease;
   }
   .settings-widget-content { flex-grow: 1; min-height: 0; overflow-y: auto; padding-right: 5px; }
   .settings-widget-content::-webkit-scrollbar { width: 6px; }
@@ -598,6 +619,13 @@
     #live-time-card {
       display: none; /* Hide time widget on mobile */
     }
+    /* Hide weeks bar by default on mobile */
+    #weeks-bar-container { display: none; }
+    /* Show it only when the live-view is active, using a data-attribute on the body */
+    body[data-active-view="live-view"] #weeks-bar-container { 
+      display: block;
+      animation: fadeIn 0.3s ease-in-out;
+    }
     .weeks-chooser {
       display: none; /* Hide desktop weeks bar on mobile */
     }
@@ -654,19 +682,17 @@
 
 <!-- MAIN CONTENT -->
 <div class="main-content">
-  
+  <!-- The weeks bar is moved outside the views to prevent it from re-animating on view switch -->
+  <div id="weeks-bar-container">
+    <!-- Mobile weeks nav is pre-rendered to prevent layout shift -->
+    <div class="weeks-mobile-nav" style="display: none;">
+      <button class="nav-arrow" id="mobile-prev-week"><span class="material-symbols-outlined">arrow_back_ios</span></button>
+      <div class="current-week-display"></div>
+      <button class="nav-arrow" id="mobile-next-week"><span class="material-symbols-outlined">arrow_forward_ios</span></button>
+    </div>
+  </div>
   <!-- HOME VIEW -->
   <div id="live-view" class="view active">
-    <div id="weeks-bar-container">
-      <!-- Mobile weeks nav is pre-rendered to prevent layout shift -->
-      <div class="weeks-mobile-nav" style="display: none;">
-        <button class="nav-arrow" id="mobile-prev-week">
-          <span class="material-symbols-outlined">arrow_back_ios</span>
-        </button>
-        <div class="current-week-display"></div>
-        <button class="nav-arrow" id="mobile-next-week"><span class="material-symbols-outlined">arrow_forward_ios</span></button>
-      </div>
-    </div>
     <div id="home-grid" class="widget-grid">
       <!-- Live Time and Subject cards will be rendered here by JS -->
     </div>
@@ -754,10 +780,10 @@ fetch("https://raw.githubusercontent.com/WEEKGE/live/main/config.json")
 
 function startWeekge() {
   const auth = firebase.auth(), db = firebase.firestore();
-  let user = null, catalog = [], selected = [], cache = {}, weekDates = [], userDays = {}, userThemeName = null, lectureDuration = "03:00", mySubjectsPageIndex = 0;
+    let user = null, catalog = [], selected = [], cache = {}, weekDates = [], userDays = {}, userThemeName = null, lectureDuration = "03:00", mySubjectCarouselIndex = 0;
   let currentWeekData = null, selectedWeekNumber = null;
 
-  const daysOfWeek = ["ორშაბათი","სამშაბათი","ოთხშაბათი","ხუთშაბათი","პარასკევი","შაბათი","კვირა"];
+  const daysOfWeek = ["ორშაბათი","სამშაბათი","ოთხშაბათი","ხუთშაბათი","პარასკევი","შაბათი"];
 
   const todayISO = () => new Date().toISOString().slice(0, 10);
   const isBetween = (d, s, e) => d >= s && d <= e;
@@ -935,6 +961,9 @@ function startWeekge() {
     const views = $$('.view');
     const pageTitle = $('#page-title');
 
+    // Set the initial active view on the body for correct CSS targeting on startup
+    document.body.dataset.activeView = 'live-view';
+
     navItems.forEach(item => {
       item.addEventListener('click', () => {
         const viewId = item.dataset.view;
@@ -946,6 +975,9 @@ function startWeekge() {
         $(`#${viewId}`).classList.add('active');
 
         pageTitle.textContent = item.dataset.title;
+
+        // Set a data-attribute on the body for more flexible CSS targeting
+        document.body.dataset.activeView = viewId;
       });
     });
   }
@@ -1185,46 +1217,39 @@ function startWeekge() {
     const catalogColumn = el('div', { className: 'settings-column' });
     const sideColumn = el('div', { className: 'settings-column' });
 
-    // -- My Subjects Widget (with pagination) --
-    const mySubjectsContent = el('div', { className: 'settings-widget-content' });
-    const pageSize = 3;
+    // -- My Subjects Carousel (no widget container) --
     const sortedSelected = selected.map(id => cache[id]).filter(Boolean).sort((a, b) => a.name.localeCompare(b.name));
-    const maxPage = Math.ceil(sortedSelected.length / pageSize) - 1;
-    
-    // Clamp the start index to valid bounds
-    if (mySubjectsPageIndex > maxPage) {
-      mySubjectsPageIndex = Math.max(0, maxPage);
+    const carouselContent = el('div', { className: 'subject-carousel-content' });
+
+    // Clamp index if a subject was removed
+    if (mySubjectCarouselIndex >= sortedSelected.length) {
+      mySubjectCarouselIndex = Math.max(0, sortedSelected.length - 1);
     }
 
-    const startIndex = mySubjectsPageIndex * pageSize;
-    const visibleSubjects = sortedSelected.slice(startIndex, startIndex + pageSize);
-    visibleSubjects.forEach(subj => {
-        const subjectWidget = createMySubjectWidget(subj);
-        mySubjectsContent.append(subjectWidget);
-    });
-
-    let mySubjectsCard;
-    if (sortedSelected.length > pageSize) {
-        const upBtn = el('button', { className: 'list-nav-btn', disabled: mySubjectsPageIndex === 0 }, [el('span', {className: 'material-symbols-outlined', textContent: 'expand_less'})]);
-        const downBtn = el('button', { className: 'list-nav-btn', disabled: mySubjectsPageIndex >= maxPage }, [el('span', {className: 'material-symbols-outlined', textContent: 'expand_more'})]);
-        
-        upBtn.onclick = () => { mySubjectsPageIndex = Math.max(0, mySubjectsPageIndex - 1); renderSettingsPage(); };
-        downBtn.onclick = () => { mySubjectsPageIndex = Math.min(mySubjectsPageIndex + 1, maxPage); renderSettingsPage(); };
-
-        const navControls = el('div', { className: 'list-nav-controls' }, [upBtn, downBtn]);
-        const contentWrapper = el('div', { style: 'display: flex; gap: 15px; flex-grow: 1;'}, [mySubjectsContent, navControls]);
-        
-        mySubjectsCard = el('div', { id: 'my-subjects-widget', className: 'widget-card', style: 'flex: 1;' }, [
-            el('h3', { className: 'widget-title', textContent: 'ჩემი საგნები' }),
-            contentWrapper
-        ]);
+    if (sortedSelected.length > 0) {
+      const currentSubject = sortedSelected[mySubjectCarouselIndex];
+      carouselContent.append(createMySubjectWidget(currentSubject));
     } else {
-        mySubjectsCard = el('div', { id: 'my-subjects-widget', className: 'widget-card', style: 'flex: 1;' }, [
-            el('h3', { className: 'widget-title', textContent: 'ჩემი საგნები' }),
-            mySubjectsContent
-        ]);
+      carouselContent.append(el('p', {className: 'empty-placeholder', style: 'padding: 20px;', textContent: 'საგნები არ არის არჩეული.'}));
     }
-    mySubjectsColumn.append(mySubjectsCard);
+
+    const prevBtn = el('button', { className: 'subject-carousel-nav-btn', disabled: sortedSelected.length < 2 }, [el('span', {className: 'material-symbols-outlined', textContent: 'arrow_back_ios_new'})]);
+    const nextBtn = el('button', { className: 'subject-carousel-nav-btn', disabled: sortedSelected.length < 2 }, [el('span', {className: 'material-symbols-outlined', textContent: 'arrow_forward_ios'})]);
+
+    prevBtn.onclick = () => {
+      mySubjectCarouselIndex = (mySubjectCarouselIndex - 1 + sortedSelected.length) % sortedSelected.length;
+      renderSettingsPage();
+    };
+    nextBtn.onclick = () => {
+      mySubjectCarouselIndex = (mySubjectCarouselIndex + 1) % sortedSelected.length;
+      renderSettingsPage();
+    };
+
+    const navButtonsContainer = el('div', { className: 'subject-carousel-nav-container' }, [prevBtn, nextBtn]);
+
+    mySubjectsColumn.append(carouselContent);
+    mySubjectsColumn.append(navButtonsContainer);
+
     // -- Subjects Catalog Widget --
     const searchInput = el('input', { id: 'catalog-search', type: 'search', placeholder: 'საგნის მოძებნა...' });
     const searchContainer = el('div', { className: 'search-input-container' }, [
@@ -1290,7 +1315,7 @@ function startWeekge() {
 
   function createMySubjectWidget(subj) {
       const lectureStartTimes = ["09:00", "11:20", "13:40", "16:00", "18:20"];
-      const dayAbbreviations = ["ორშ", "სამ", "ოთხ", "ხუთ", "პარ", "შაბ", "კვ"];
+      const dayAbbreviations = ["ორშ", "სამ", "ოთხ", "ხუთ", "პარ", "შაბ"];
       const currentDay = userDays[subj.id]?.day;
 
       const timeSelect = el('select', { className: 'day-time-select' });
@@ -1336,7 +1361,7 @@ function startWeekge() {
       removeBtn.onclick = () => {
         selected = selected.filter(id => id !== subj.id);
         delete userDays[subj.id];
-        // mySubjectsPageIndex will be auto-clamped on re-render
+        // mySubjectCarouselIndex will be auto-clamped on re-render
         autoSave();
         renderSettingsPage();
       };
@@ -1344,13 +1369,17 @@ function startWeekge() {
       const controls = el('div', { style: 'display: flex; flex-direction: column; gap: 10px; flex-grow: 1;'}, [
         el('h3', { className: 'widget-title', textContent: subj.name, style: 'font-size: 1.1rem; margin-bottom: 5px;' }),
         weekdayContainer,
-        timeSelect
+        timeSelect,
       ]);
 
       // This is now an item within a widget, not a full widget-card itself.
-      return el('div', { className: 'settings-item', style: 'align-items: flex-start; padding: 15px; background: rgba(255,255,255,0.03); border-radius: 12px; gap: 15px;' }, [
+      return el('div', { className: 'settings-item', style: 'flex-direction: column; align-items: stretch; padding: 15px; background: rgba(255,255,255,0.03); border-radius: 12px; gap: 15px; border-bottom: none;' }, [
+          el('div', {style: 'display: flex; justify-content: space-between; align-items: flex-start;'}, [
+            el('h3', { className: 'widget-title', textContent: subj.name, style: 'font-size: 1.1rem;' }),
           removeBtn,
-          controls,
+          ]),
+          weekdayContainer,
+          timeSelect
       ]);
   }
 
