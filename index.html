@@ -215,16 +215,87 @@
     color: var(--text-muted-color);
   }
 
+  .quiz-check-btn {
+    border-radius: 50%;
+    background-color: rgba(255,255,255,0.08);
+    border: 1px solid transparent;
+    color: var(--text-muted-color);
+    cursor: pointer;
+    display: grid;
+    place-items: center;
+    transition: all 0.2s ease;
+    width: 50px; /* Match embed link icon circle */
+    height: 50px; /* Match embed link icon circle */
+    align-self: center; /* Align with other icons */
+    margin-left: auto; /* Push to the right of other links */
+  }
+  .quiz-check-btn.checked {
+    background-color: var(--accent-color);
+    color: var(--text-on-accent-color);
+  }
+
+  #weeks-left-card {
+    text-align: center;
+    justify-content: center;
+    background-color: color-mix(in srgb, var(--accent-color) 8%, var(--widget-color));
+    border: 1px solid color-mix(in srgb, var(--accent-color) 20%, transparent);
+  }
+  #weeks-left-card .number {
+    font-size: 3.5rem;
+    font-weight: 700;
+  }
+  #weeks-left-card .label {
+    font-size: 1.2rem;
+    color: var(--text-muted-color);
+  }
   .subject-card.is-upcoming {
     background-color: color-mix(in srgb, var(--accent-color) 8%, var(--widget-color));
     border: 1px solid color-mix(in srgb, var(--accent-color) 20%, transparent);
   }
 
+  #quiz-progress-widget {
+    grid-column: span 2;
+    grid-row: span 2;
+    padding: 25px;
+  }
+  .quiz-progress-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 1fr 1fr;
+    gap: 25px;
+    height: 100%;
+  }
+  .quiz-progress-item {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .quiz-progress-item .name {
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .quiz-progress-item .progress-bar-bg {
+    width: 100%;
+    height: 8px;
+    background-color: rgba(255,255,255,0.1);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  .quiz-progress-item .progress-bar-fg {
+    height: 100%;
+    background-color: var(--accent-color);
+    border-radius: 4px;
+    transition: width 0.5s ease-out;
+  }
+  /* .subject-card { position: relative; } /* No longer needed */
   .subject-card .topic {
     font-size: 1rem;
     line-height: 1.5;
     color: var(--text-muted-color);    
     white-space: nowrap; /* Keep text on a single line */
+    animation: fadeIn 0.3s ease-in-out; /* Add animation on week change */
     text-overflow: ellipsis; /* Add ... for overflow */
     overflow: hidden;
   }
@@ -473,8 +544,7 @@
   .subject-carousel-nav-btn:hover {
     background: #ffffff20;
   }
-  .subject-carousel-nav-btn.active {
-  }
+  
   .settings-widget-content { flex-grow: 1; min-height: 0; overflow-y: auto; padding-right: 5px; }
   .settings-widget-content::-webkit-scrollbar { width: 6px; }
   .settings-widget-content::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 3px; }
@@ -722,6 +792,7 @@
   }
   body[data-active-view="live-view"] #weeks-bar-container {
     display: block;
+    animation: fadeIn 0.3s ease-in-out;
   }
 
   @media screen and (max-width: 1000px) {
@@ -889,7 +960,7 @@ fetch("https://raw.githubusercontent.com/WEEKGE/live/main/config.json")
 
 function startWeekge() {
   const auth = firebase.auth(), db = firebase.firestore();
-    let user = null, catalog = [], selected = [], cache = {}, weekDates = [], userDays = {}, userThemeName = null, lectureDuration = "03:00", mySubjectCarouselIndex = 0;
+    let user = null, catalog = [], selected = [], cache = {}, weekDates = [], userDays = {}, userThemeName = null, lectureDuration = "03:00", mySubjectCarouselIndex = 0, quizCompletion = {};
   let currentWeekData = null, selectedWeekNumber = null;
 
   const daysOfWeek = ["ორშაბათი","სამშაბათი","ოთხშაბათი","ხუთშაბათი","პარასკევი","შაბათი"];
@@ -940,6 +1011,14 @@ function startWeekge() {
     setCookie('userThemeName', themeName, 365);
   }
 
+  async function saveQuizStatus(subjectId, weekNumber, isCompleted) {
+    const key = `${subjectId}_${weekNumber}`;
+    quizCompletion[key] = isCompleted;
+    if (user) {
+      await db.collection("users").doc(user.uid).set({ quizCompletion }, { merge: true });
+    }
+    setCookie('quizCompletion', JSON.stringify(quizCompletion), 365);
+  }
   let saveTimeout;
   function autoSave() {
     clearTimeout(saveTimeout);
@@ -1015,6 +1094,8 @@ function startWeekge() {
     renderSettingsPage();
     
     initLiveTime();
+    initWeeksLeftWidget();
+    initQuizProgressWidget();
     initNavigation();
   }
 
@@ -1034,6 +1115,7 @@ function startWeekge() {
       data.days = JSON.parse(getCookie('userDays') || '{}');
       data.userThemeName = getCookie('userThemeName') || "Default";
       data.lectureDuration = getCookie('lectureDuration') || "03:00";
+      data.quizCompletion = JSON.parse(getCookie('quizCompletion') || '{}');
     }
 
     selected = data.subjects || [];
@@ -1041,6 +1123,7 @@ function startWeekge() {
     userThemeName = data.userThemeName || "Default";
     applyTheme(userThemeName);
 
+    quizCompletion = data.quizCompletion || {};
     lectureDuration = data.lectureDuration || "03:00";
     // Ensure subjects are in cache
     const toLoad = selected.filter(id => !cache[id]);
@@ -1106,6 +1189,72 @@ function startWeekge() {
     }
     updateTime();
     setInterval(updateTime, 1000);
+  }
+
+  function initWeeksLeftWidget() {
+    const lastWeekNumber = SEMESTER_WEEKS[SEMESTER_WEEKS.length - 1].n;
+
+    if (!currentWeekData || currentWeekData.n > lastWeekNumber) {
+      // Don't show the widget if we're past the last week or have no data.
+      return;
+    }
+
+    const weeksLeft = (lastWeekNumber - currentWeekData.n) + 1;
+    const labelText = weeksLeft === 1 ? 'კვირა გამოცდებამდე' : 'კვირა გამოცდებამდე';
+
+    const numberEl = el('div', { className: 'number', textContent: weeksLeft });
+    const labelEl = el('div', { className: 'label', textContent: labelText });
+    const weeksLeftCard = el('div', { 
+        id: 'weeks-left-card', 
+        className: 'widget-card' 
+    }, [numberEl, labelEl]);
+
+    $('#live-time-card').after(weeksLeftCard);
+  }
+
+  function initQuizProgressWidget() {
+    const subjectsWithQuizzes = selected.map(id => {
+      const subj = cache[id];
+      if (!subj || !subj.weeks) return null;
+
+      let totalQuizzes = 0;
+      let completedQuizzes = 0;
+
+      SEMESTER_WEEKS.forEach(week => {
+        const weekData = subj.weeks.find(w => w.week === week.n);
+        if (weekData && weekData.type === 'ლექცია (ქვიზი)') {
+          totalQuizzes++;
+          const quizKey = `${id}_${week.n}`;
+          if (quizCompletion[quizKey]) {
+            completedQuizzes++;
+          }
+        }
+      });
+
+      if (totalQuizzes > 0) {
+        return { ...subj, totalQuizzes, completedQuizzes };
+      }
+      return null;
+    }).filter(Boolean);
+
+    if (subjectsWithQuizzes.length === 0) return; // Don't show widget if no subjects have quizzes
+
+    const progressGrid = el('div', { className: 'quiz-progress-grid' });
+
+    subjectsWithQuizzes.slice(0, 4).forEach(subj => {
+      const percentage = subj.totalQuizzes > 0 ? (subj.completedQuizzes / subj.totalQuizzes) * 100 : 0;
+      const item = el('div', { className: 'quiz-progress-item' }, [
+        el('div', { className: 'name', textContent: subj.name }),
+        el('div', { className: 'progress-bar-bg' }, [
+          el('div', { className: 'progress-bar-fg', style: `width: ${percentage}%` })
+        ]),
+        el('div', { className: 'widget-subtitle', textContent: `${subj.completedQuizzes} / ${subj.totalQuizzes} ქვიზი`})
+      ]);
+      progressGrid.append(item);
+    });
+
+    const widget = el('div', { id: 'quiz-progress-widget', className: 'widget-card' }, [progressGrid]);
+    $('#home-grid').append(widget);
   }
 
   /* === WEEKS BAR / SELECTOR === */
@@ -1337,11 +1486,31 @@ function startWeekge() {
         titleEl.prepend(el('span', { className: 'material-symbols-outlined', textContent: subj.icon, style: 'color: var(--text-muted-color);' }));
       }
 
+      const embedLinksContainer = createEmbedLinks(subj.weekButtons);
+
+      // Check for quiz and add button to the embed links container
+      if (subj.weekType === 'ლექცია (ქვიზი)') {
+        const quizKey = `${subj.id}_${selectedWeekNumber}`;
+        const isChecked = quizCompletion[quizKey] === true;
+
+        const quizCheckButton = el('button', { className: 'quiz-check-btn', title: 'ქვიზი დაწერილია' });
+        quizCheckButton.append(el('span', { className: 'material-symbols-outlined', textContent: 'check' }));
+        if (isChecked) {
+          quizCheckButton.classList.add('checked');
+        }
+
+        quizCheckButton.onclick = (e) => {
+          const newState = !quizCheckButton.classList.toggle('checked');
+          saveQuizStatus(subj.id, selectedWeekNumber, newState);
+        };
+        embedLinksContainer.append(quizCheckButton);
+      }
+
       const card = el('div', { className: cardClasses.join(' ') }, [
         titleEl,
         el('p', { className: 'widget-subtitle', textContent: subj.weekType || 'ლექცია' }),
         el('div', { className: 'topic', innerHTML: subj.weekTopic }),
-        createEmbedLinks(subj.weekButtons)
+        embedLinksContainer
       ]);
       grid.append(card);
     });
