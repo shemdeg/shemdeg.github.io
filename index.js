@@ -1,0 +1,1372 @@
+/* === MAIN APP SCRIPT === */
+
+// Wrap the entire script in an IIFE to avoid polluting the global scope
+(function () {
+  /* === UTILITIES === */
+  const $ = s => document.querySelector(s);
+  const $$ = s => document.querySelectorAll(s);
+  const el = (t, p = {}, kids = []) => {
+    const e = document.createElement(t);
+    Object.assign(e, p);
+    kids.forEach(k => e.append(k));
+    return e;
+  };
+
+  function setCookie(name, value, days) {
+    let expires = "";
+    if (days) {
+      const date = new Date();
+      date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
+      expires = "; expires=" + date.toUTCString();
+    }
+    document.cookie = name + "=" + (value || "") + expires + "; path=/";
+  }
+
+  function getCookie(name) {
+    const nameEQ = name + "=";
+    const ca = document.cookie.split(';');
+    for (let i = 0; i < ca.length; i++) {
+      let c = ca[i];
+      while (c.charAt(0) === ' ') c = c.substring(1, c.length);
+      if (c.indexOf(nameEQ) === 0) return c.substring(nameEQ.length, c.length);
+    }
+    return null;
+  }
+
+  /* === CONSTANTS & STATE === */
+  const state = {
+    user: null,
+    catalog: [],
+    selected: [],
+    cache: {},
+    weekDates: [],
+    userDays: {},
+    userThemeName: null,
+    lectureDuration: "03:00",
+    mySubjectCarouselIndex: 0,
+    quizCompletion: {},
+    currentWeekData: null,
+    selectedWeekNumber: null,
+    db: null,
+    auth: null,
+    saveTimeout: null,
+    editorIsDirty: false,
+    selectedCustomSubjectId: null,
+    selectedEditorWeek: 1,
+  };
+
+  const daysOfWeek = ["ორშაბათი", "სამშაბათი", "ოთხშაბათი", "ხუთშაბათი", "პარასკევი", "შაბათი"];
+  const todayISO = () => new Date().toISOString().slice(0, 10);
+  const isBetween = (d, s, e) => d >= s && d <= e;
+
+  const SEMESTER_WEEKS = [
+    { n: 1, start1: "2025-09-22", end1: "2025-09-28", start2: "2026-03-02", end2: "2026-03-08" },
+    { n: 2, start1: "2025-09-29", end1: "2025-10-05", start2: "2026-03-09", end2: "2026-03-15" },
+    { n: 3, start1: "2025-10-06", end1: "2025-10-12", start2: "2026-03-16", end2: "2026-03-22" },
+    { n: 4, start1: "2025-10-13", end1: "2025-10-19", start2: "2026-03-23", end2: "2026-03-29" },
+    { n: 5, start1: "2025-10-20", end1: "2025-10-26", start2: "2026-03-30", end2: "2026-04-05" },
+    { n: 6, start1: "2025-10-27", end1: "2025-11-02", start2: "2026-04-06", end2: "2026-04-12" },
+    { n: 7, start1: "2025-11-03", end1: "2025-11-09", start2: "2026-04-20", end2: "2026-04-26" },
+    { n: 8, start1: "2025-11-10", end1: "2025-11-16", start2: "2026-04-27", end2: "2026-05-03" },
+    { n: 9, start1: "2025-11-17", end1: "2025-11-23", start2: "2026-05-04", end2: "2026-05-10" },
+    { n: 10, start1: "2025-11-24", end1: "2025-11-30", start2: "2026-05-11", end2: "2026-05-17" },
+    { n: 11, start1: "2025-12-01", end1: "2025-12-07", start2: "2026-05-18", end2: "2026-05-24" },
+    { n: 12, start1: "2025-12-08", end1: "2025-12-14", start2: "2026-05-25", end2: "2026-05-31" },
+    { n: 13, start1: "2025-12-15", end1: "2025-12-20", start2: "2026-06-01", end2: "2026-06-06" }
+  ];
+
+  const THEMES = {
+    "Default": { bg: "#121212", widget: "#1E1E1E", text: "#fff", accent: "#fff", accentVariant: "#fff", textOnAccent: "#000000" },
+    "Ocean": { bg: "#0F2027", widget: "#203A43", text: "#ffffff", accent: "#1488CC", accentVariant: "#2B32B2", textOnAccent: "#FFFFFF" },
+    "SciFi": { bg: "#0A0F1E", widget: "#1A243D", text: "#E0E8FF", accent: "#00D1FF", accentVariant: "#007B9A", textOnAccent: "#000000" },
+    "Sunset": { bg: "#2C0A1E", widget: "#4F1C3A", text: "#ffffff", accent: "#FF8C61", accentVariant: "#C83C66", textOnAccent: "#000000" },
+    "Forest": { bg: "#2C3E36", widget: "#3E564B", text: "#F0F5F2", accent: "#6AEB8E", accentVariant: "#4CAF50", textOnAccent: "#000000" },
+    "Light": { bg: "#F7F7F7", widget: "#FFFFFF", text: "#000000", accent: "#000000", accentVariant: "#333333", textOnAccent: "#FFFFFF" },
+    "Latte": { bg: "#ffe3d3", widget: "#fff8f3", text: "#422D24", accent: "#ac5a3a", accentVariant: "#5D4037", textOnAccent: "#FFFFFF" },
+  };
+
+  /* === DATA & API FUNCTIONS === */
+
+  function applyTheme(themeName) {
+    const theme = THEMES[themeName] || THEMES["Default"];
+    const root = document.documentElement;
+    root.style.setProperty('--bg-color', theme.bg);
+    root.style.setProperty('--widget-color', theme.widget);
+    root.style.setProperty('--text-color', theme.text);
+    root.style.setProperty('--accent-color', theme.accent);
+    root.style.setProperty('--accent-variant-color', theme.accentVariant);
+    root.style.setProperty('--text-on-accent-color', theme.textOnAccent);
+    state.userThemeName = themeName;
+  }
+
+  async function saveTheme(themeName) { // This function is for theme only
+    applyTheme(themeName);
+    if (state.user) {
+      await state.db.collection("users").doc(state.user.uid).set({ userThemeName: themeName }, { merge: true });
+    }
+    setCookie('userThemeName', themeName, 365);
+  }
+
+  async function saveQuizStatus(subjectId, weekNumber, isCompleted) {
+    const key = `${subjectId}_${weekNumber}`;
+    state.quizCompletion[key] = isCompleted;
+    if (state.user) {
+      await state.db.collection("users").doc(state.user.uid).set({ quizCompletion: state.quizCompletion }, { merge: true });
+    }
+    setCookie('quizCompletion', JSON.stringify(state.quizCompletion), 365);
+  }
+
+  function autoSave() {
+    clearTimeout(state.saveTimeout);
+    state.saveTimeout = setTimeout(saveSettings, 1200); // Debounce saves by 1.2 seconds
+  }
+
+  async function saveSettings() { // This now handles subjects and duration
+    if (state.user) {
+      await state.db.collection("users").doc(state.user.uid).set({
+        subjects: state.selected,
+        days: state.userDays,
+        lectureDuration: state.lectureDuration
+      }, { merge: true });
+    }
+    setCookie('selectedSubjects', JSON.stringify(state.selected), 365);
+    setCookie('userDays', JSON.stringify(state.userDays), 365);
+    setCookie('lectureDuration', state.lectureDuration, 365);
+
+    // Re-render pages to reflect changes without a full reload
+    renderHomePage();
+    renderResourcesPage();
+    console.log("Settings auto-saved.");
+  }
+
+  function markEditorAsDirty() {
+    if (state.editorIsDirty) return; // Already dirty, no need to do anything
+    state.editorIsDirty = true;
+    const applyBtn = $('#editor-apply-btn');
+    if (applyBtn) {
+      applyBtn.classList.add('is-dirty');
+    }
+  }
+
+  async function saveCustomSubjects() {
+    const applyBtn = $('#editor-apply-btn');
+    if (!applyBtn || !state.selectedCustomSubjectId) return;
+
+    // 1. Set to "Saving" state
+    applyBtn.textContent = 'Saving...';
+    applyBtn.classList.add('saving');
+    applyBtn.classList.remove('saved', 'is-dirty');
+    applyBtn.disabled = true;
+
+    try {
+        const subjectToSave = state.cache[state.selectedCustomSubjectId];
+        if (state.user && subjectToSave) {
+            // Save only the currently selected custom subject
+            const path = `customSubjects.${subjectToSave.id}`;
+            await state.db.collection("users").doc(state.user.uid).update({
+                [path]: subjectToSave
+            });
+        }
+
+        // 2. Set to "Saved" state
+        state.editorIsDirty = false;
+        applyBtn.textContent = 'Saved!';
+        applyBtn.classList.remove('saving');
+        applyBtn.classList.add('saved');
+
+        // 3. Revert to default after 3 seconds
+        setTimeout(() => {
+            applyBtn.textContent = 'Apply';
+            applyBtn.classList.remove('saved');
+            applyBtn.disabled = false;
+        }, 3000);
+
+    } catch (error) {
+        console.error("Failed to save custom subjects:", error);
+        applyBtn.textContent = 'Error!';
+        applyBtn.style.backgroundColor = '#B00020'; // Red for error
+        applyBtn.disabled = false;
+        state.editorIsDirty = true; // Remain dirty on error
+    }
+  }
+
+  async function deleteCustomSubjectFromDB(subjectId) {
+    if (state.user && subjectId) {
+      try {
+        const path = `customSubjects.${subjectId}`;
+        await state.db.collection("users").doc(state.user.uid).update({
+          [path]: firebase.firestore.FieldValue.delete()
+        });
+      } catch (error) { console.error("Error deleting subject from DB:", error); }
+    }
+  }
+
+  async function loadData() {
+    // Load catalog
+    const catalogSnap = await state.db.collection("subjects").get();
+    state.catalog = catalogSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+    // Load user data
+    let data = {};
+    if (state.user) {
+      const userSnap = await state.db.collection("users").doc(state.user.uid).get();
+      data = userSnap.exists ? userSnap.data() : {};
+    } else {
+      // Fallback to cookies if not logged in
+      data.subjects = JSON.parse(getCookie('selectedSubjects') || '[]');
+      data.days = JSON.parse(getCookie('userDays') || '{}');
+      data.userThemeName = getCookie('userThemeName') || "Default";
+      data.lectureDuration = getCookie('lectureDuration') || "03:00";
+      data.quizCompletion = JSON.parse(getCookie('quizCompletion') || '{}');
+    }
+
+    state.selected = data.subjects || [];
+    state.userDays = data.days || {};
+    state.userThemeName = data.userThemeName || "Default";
+    applyTheme(state.userThemeName);
+
+    // Load custom subjects and merge into cache
+    if (data.customSubjects) {
+      Object.assign(state.cache, data.customSubjects);
+      // Also add them to the `selected` array if they aren't already
+      Object.keys(data.customSubjects).forEach(id => !state.selected.includes(id) && state.selected.push(id));
+    }
+    state.quizCompletion = data.quizCompletion || {};
+    state.lectureDuration = data.lectureDuration || "03:00";
+    // Ensure subjects are in cache
+    const toLoad = state.selected.filter(id => !state.cache[id]);
+    for (const id of toLoad) {
+      const subj = state.catalog.find(c => c.id === id);
+      if (subj) state.cache[id] = subj;
+    }
+  }
+
+  /* === LOGIC HELPERS === */
+
+  function flattenWeeks() {
+    state.weekDates = [];
+    SEMESTER_WEEKS.forEach(w => {
+      if (w.start1) state.weekDates.push({ n: w.n, start: w.start1, end: w.end1 });
+      if (w.start2) state.weekDates.push({ n: w.n, start: w.start2, end: w.end2 });
+    });
+  }
+
+  function initCurrentWeek() {
+    const iso = todayISO();
+    state.currentWeekData = state.weekDates.find(w => isBetween(iso, w.start, w.end)) || state.weekDates[0];
+    state.selectedWeekNumber = state.currentWeekData ? state.currentWeekData.n : (state.weekDates.length > 0 ? state.weekDates[0].n : 1);
+  }
+
+  function isSubjectEnded(subject, currentTime, durationMs) {
+    if (!subject.time || subject.dayIndex === -1 || subject.dayIndex === undefined) return false;
+
+    const nowDayIndex = currentTime.getDay() === 0 ? 6 : currentTime.getDay() - 1;
+
+    if (subject.dayIndex > nowDayIndex) {
+      return false; // Subject is on a future day of the week
+    }
+
+    const [hour, minute] = subject.time.split(':').map(Number);
+
+    // Create a date object for the subject's lecture this week
+    const subjectDate = new Date(currentTime);
+    const dayDifference = subject.dayIndex - nowDayIndex;
+    subjectDate.setDate(subjectDate.getDate() + dayDifference);
+    subjectDate.setHours(hour, minute, 0, 0);
+
+    const subjectEnd = new Date(subjectDate.getTime() + durationMs);
+
+    return currentTime > subjectEnd;
+  }
+
+  function sortByWeekdayTimeAndStatus(subjs, selectedWeekNumber, currentWeekData, lectureDuration) {
+    const now = new Date();
+    const [hours, minutes] = lectureDuration.split(':').map(Number);
+    const lectureDurationMs = (hours * 60 * 60 * 1000) + (minutes * 60 * 1000);
+
+    const isSelectedWeekCurrent = currentWeekData && (selectedWeekNumber === currentWeekData.n);
+
+    return subjs.sort((a, b) => {
+      // For the current week, sort by "ended" status first.
+      if (isSelectedWeekCurrent) {
+        const isEndedA = isSubjectEnded(a, now, lectureDurationMs);
+        const isEndedB = isSubjectEnded(b, now, lectureDurationMs);
+        if (isEndedA !== isEndedB) {
+          return isEndedA ? 1 : -1; // Ended subjects go to the bottom.
+        }
+      }
+
+      // For all weeks (or for subjects with the same "ended" status on the current week),
+      // sort by day, then time.
+      if (a.dayIndex !== b.dayIndex) return a.dayIndex - b.dayIndex;
+      if (a.time && b.time) return a.time.localeCompare(b.time);
+      return a.name.localeCompare(b.name); // Fallback to name sort.
+    });
+  }
+
+  function checkWeekCompletionStatus(weekNumber) {
+    const currentWeekNum = state.currentWeekData ? state.currentWeekData.n : 1;
+    if (weekNumber >= currentWeekNum) {
+      return { status: 'none', count: 0 }; // Dots only for past weeks.
+    }
+
+    let totalQuizzes = 0;
+    let missedCount = 0;
+
+    for (const subjId of state.selected) {
+      const subj = state.cache[subjId];
+      if (!subj) continue;
+
+      const subjectWeekData = subj.weeks?.find(w => w.week === weekNumber);
+      const weekType = subjectWeekData?.type;
+
+      if (['ლექცია (ქვიზი)', 'შუალედური', 'პრეზენტაცია'].includes(weekType)) {
+        totalQuizzes++;
+        const quizKey = `${subjId}_${weekNumber}`;
+        const isCompleted = state.quizCompletion[quizKey] === true;
+
+        if (!isCompleted) {
+          missedCount++;
+        }
+      }
+    }
+
+    if (totalQuizzes === 0) { // If a past week has no quizzes, consider it completed.
+      return { status: 'completed', count: 0 };
+    }
+
+    if (missedCount > 0) {
+      return { status: 'missed', count: missedCount };
+    }
+
+    // If totalQuizzes > 0 and missedCount is 0, it means all are completed.
+    return { status: 'completed', count: totalQuizzes };
+  }
+
+  function getEmbedIcon(type) {
+    switch (type?.toLowerCase()) {
+      case 'slide': return 'slideshow';
+      case 'video': return 'play_circle';
+      case 'book': return 'menu_book';
+      default: return 'link';
+    }
+  }
+
+  /* === UI RENDERING FUNCTIONS === */
+
+  function createEmbedLinks(buttons, truncateCustomLabel = false) {
+    const container = el('div', { className: 'embed-links' });
+    if (!buttons || buttons.length === 0) return container;
+
+    buttons.forEach(b => {
+      const isCustom = b.type === 'custom';
+      let labelText = b.label || '';
+
+      if (isCustom && truncateCustomLabel && labelText.length > 5) {
+        labelText = labelText.substring(0, 5) + '…';
+      }
+
+      const iconCircleClass = isCustom ? 'icon-circle is-custom' : 'icon-circle';
+      const linkClass = isCustom ? 'embed-link is-custom' : 'embed-link';
+
+      const link = el('a', { className: linkClass, href: b.link || '#', target: '_blank', title: b.label }, [
+        el('div', { className: iconCircleClass }, [
+          el('span', { className: 'material-symbols-outlined', textContent: getEmbedIcon(b.type) }),
+          ...(isCustom ? [el('span', { className: 'label', textContent: labelText, style: 'white-space: nowrap;' })] : [])])]);
+      container.append(link);
+    });
+    return container;
+  }
+
+  function initLiveTime() {
+    const timeEl = el('div', { className: 'time' });
+    const dateEl = el('div', { className: 'date' });
+    const timeCard = el('div', { id: 'live-time-card', className: 'widget-card' }, [timeEl, dateEl]);
+
+    $('#home-grid').prepend(timeCard);
+
+    function updateTime() {
+      const now = new Date();
+      timeEl.textContent = now.toLocaleTimeString('ka-GE', { hour: '2-digit', minute: '2-digit' });
+      dateEl.textContent = now.toLocaleDateString('ka-GE', { weekday: 'long', month: 'long', day: 'numeric' });
+    }
+    updateTime();
+    setInterval(updateTime, 1000);
+  }
+
+  function initSummaryWidget() {
+    // Remove old widgets if they exist
+    $('#weeks-left-card')?.remove();
+    $('#quiz-counter-card')?.remove();
+    $('#summary-widget')?.remove();
+
+    // 2. Quiz stats
+    let completedQuizzes = 0;
+    let missedQuizzes = 0;
+    let remainingQuizzes = 0;
+    const currentWeekNum = state.currentWeekData ? state.currentWeekData.n : 1; // Default to week 1 if not found
+
+    // Iterate over every selected subject
+    state.selected.forEach(subjId => {
+      const subj = state.cache[subjId];
+      if (!subj) return; // Skip if subject not in cache
+
+      // Iterate over ALL possible semester weeks for each subject
+      SEMESTER_WEEKS.forEach(semesterWeek => {
+        const weekNumber = semesterWeek.n;
+
+        // Find the specific week data for this subject, if it exists
+        const subjectWeekData = subj.weeks?.find(w => w.week === weekNumber);
+        const weekType = subjectWeekData?.type;
+
+        // Only count if the week type indicates a quiz
+        if (['ლექცია (ქვიზი)', 'შუალედური', 'პრეზენტაცია'].includes(weekType)) {
+          const quizKey = `${subjId}_${weekNumber}`;
+          const isCompleted = state.quizCompletion[quizKey] === true;
+
+          if (isCompleted) {
+            completedQuizzes++;
+          } else if (weekNumber < currentWeekNum) {
+            // Not completed and in the past -> Missed
+            missedQuizzes++;
+          } else {
+            // Not completed and is current or future -> Remaining
+            remainingQuizzes++;
+          }
+        }
+      });
+    });
+
+    // --- Create Widget ---
+    const createStatItem = (label, value, valueStyle = {}) => {
+      const valueEl = el('div', { className: 'summary-value', textContent: value });
+      Object.assign(valueEl.style, valueStyle);
+      return el('div', { className: 'summary-item' }, [
+        valueEl,
+        el('div', { className: 'summary-label', textContent: label })
+      ]);
+    };
+
+    const completedStyle = { color: '#8c8c8c90' }; // Green
+    const missedStyle = missedQuizzes > 0 ? { color: '#ff3c2e' } : {}; // Red if > 0
+
+    const summaryCard = el('div', {
+      id: 'summary-widget',
+      className: 'widget-card'
+    }, [
+      createStatItem('ჩასაბარებელი ქვიზი', remainingQuizzes, {}),
+      createStatItem('ჩაბარებული ქვიზი', completedQuizzes, completedStyle),
+      createStatItem('აღსადგენი ქვიზი', missedQuizzes, missedStyle),
+    ]);
+
+    $('#live-time-card').after(summaryCard);
+  }
+
+  function renderWeeksBar() {
+    const container = $('#weeks-bar-container');
+    container.innerHTML = ''; // Clear previous content
+
+    // --- Desktop Weeks Bar (Horizontal List) ---
+    const chooser = el('div', { className: 'weeks-chooser' });
+    SEMESTER_WEEKS.forEach(week => {
+      const btn = el('button', { className: 'week-button', textContent: `კვირა ${week.n}` });
+      if (week.n === state.selectedWeekNumber) btn.classList.add('active');
+      if (state.currentWeekData && week.n === state.currentWeekData.n) btn.classList.add('is-current');
+
+      const weekStatus = checkWeekCompletionStatus(week.n);
+      if (weekStatus.status === 'missed') {
+        btn.append(el('span', { className: 'missed-quiz-dot', textContent: weekStatus.count }));
+      } else if (weekStatus.status === 'completed') {
+        btn.append(el('span', { className: 'completed-quiz-dot' }, [
+          el('span', { className: 'material-symbols-outlined', textContent: 'check', style: 'font-size: 1.2rem;' })
+        ]));
+      }
+
+      btn.onclick = () => {
+        state.selectedWeekNumber = week.n;
+        renderHomePage();
+        renderWeeksBar(); // Re-render to update active state
+      };
+      chooser.append(btn);
+    });
+    container.append(chooser);
+
+    // --- Pre-render Mobile Navigator and append it ---
+    const mobileNavTemplate = `
+      <div class="weeks-mobile-nav" style="display: none;">
+        <button class="nav-arrow" id="mobile-prev-week"><span class="material-symbols-outlined">arrow_back_ios</span></button>
+        <div class="current-week-display"></div>
+        <button class="nav-arrow" id="mobile-next-week"><span class="material-symbols-outlined">arrow_forward_ios</span></button>
+      </div>`;
+    container.insertAdjacentHTML('beforeend', mobileNavTemplate);
+
+    // --- Fullscreen Overlay Logic ---
+    const weekSelectorOverlay = $('#week-selector-overlay');
+    weekSelectorOverlay.onclick = (e) => { if (e.target === weekSelectorOverlay) weekSelectorOverlay.classList.remove('visible'); };
+
+    // --- Mobile Navigator ---
+    const prevWeek = () => {
+      const currentIndex = SEMESTER_WEEKS.findIndex(w => w.n === state.selectedWeekNumber);
+      if (currentIndex > 0) {
+        state.selectedWeekNumber = SEMESTER_WEEKS[currentIndex - 1].n;
+        renderHomePage();
+        renderWeeksBar();
+      }
+    };
+    const nextWeek = () => {
+      const currentIndex = SEMESTER_WEEKS.findIndex(w => w.n === state.selectedWeekNumber);
+      if (currentIndex < SEMESTER_WEEKS.length - 1) {
+        state.selectedWeekNumber = SEMESTER_WEEKS[currentIndex + 1].n;
+        renderHomePage();
+        renderWeeksBar();
+      }
+    };
+
+    // --- Update Pre-rendered Mobile Navigator ---
+    const mobileNav = $('.weeks-mobile-nav');
+    const weekDisplay = $('.current-week-display');
+    const prevBtn = $('#mobile-prev-week');
+    const nextBtn = $('#mobile-next-week');
+
+    weekDisplay.textContent = `კვირა ${state.selectedWeekNumber}`;
+    mobileNav.classList.remove('is-current'); // Reset class
+    if (state.currentWeekData && state.selectedWeekNumber === state.currentWeekData.n) {
+      mobileNav.classList.add('is-current');
+    }
+    const mobileWeekStatus = checkWeekCompletionStatus(state.selectedWeekNumber);
+    if (mobileWeekStatus.status === 'missed') {
+      mobileNav.append(el('span', { className: 'missed-quiz-dot', textContent: mobileWeekStatus.count }));
+    } else if (mobileWeekStatus.status === 'completed') {
+      mobileNav.append(el('span', { className: 'completed-quiz-dot' }, [
+        el('span', { className: 'material-symbols-outlined', textContent: 'check', style: 'font-size: 1.2rem;' })
+      ]));
+    }
+
+    prevBtn.onclick = prevWeek;
+    nextBtn.onclick = nextWeek;
+    prevBtn.disabled = state.selectedWeekNumber === 1;
+    nextBtn.disabled = state.selectedWeekNumber === SEMESTER_WEEKS.length;
+  }
+
+  function renderHomePage() {
+    const grid = $('#home-grid');
+    // Clear only subject cards, not the time widget
+    $$('#home-grid .subject-card').forEach(card => card.remove());
+
+    const now = new Date();
+
+    const subjectsForWeek = state.selected.map(id => {
+      const subj = state.cache[id];
+      if (!subj) return null;
+
+      const dayData = state.userDays?.[id] ?? { day: null, time: null };
+      const dayIndex = daysOfWeek.indexOf(dayData.day);
+
+      let weekContentToShow = state.selectedWeekNumber;
+      const isCurrentWeekSelected = state.currentWeekData && state.selectedWeekNumber === state.currentWeekData.n;
+      let isUpcomingForContent = false;
+
+      if (isCurrentWeekSelected && dayIndex !== -1 && dayData.time) {
+        const [hours, minutes] = state.lectureDuration.split(':').map(Number);
+        const lectureDurationMs = (hours * 60 * 60 * 1000) + (minutes * 60 * 1000);
+        const ended = isSubjectEnded({ dayIndex, time: dayData.time }, now, lectureDurationMs);
+
+        if (!ended && weekContentToShow > 1) { // If not ended (upcoming), show previous week
+          weekContentToShow = state.selectedWeekNumber - 1;
+          isUpcomingForContent = true;
+        }
+      }
+
+      const weekData = subj.weeks?.find(w => w.week === weekContentToShow) || {};
+      return {
+        ...subj,
+        weekTopic: weekData.topic || '<i>თემა არ არის მითითებული</i>',
+        weekType: weekData.type,
+        weekButtons: weekData.buttons,
+        dayIndex: dayIndex,
+        time: dayData.time,
+        isScheduled: dayIndex !== -1,
+        isUpcomingForContent: isUpcomingForContent // Pass this flag
+      };
+    }).filter(Boolean);
+
+    const sortedSubjects = sortByWeekdayTimeAndStatus(subjectsForWeek, state.selectedWeekNumber, state.currentWeekData, state.lectureDuration);
+
+    if (subjectsForWeek.length === 0) {
+      if (!$('.empty-placeholder')) {
+        grid.append(el('p', { className: 'empty-placeholder', textContent: 'საგნები არ არის არჩეული. დაამატე პარამეტრებიდან.' }));
+      }
+      return;
+    } else {
+      const placeholder = $('.empty-placeholder');
+      if (placeholder) placeholder.remove();
+    }
+
+    sortedSubjects.forEach(subj => {
+      let isUpcoming = false;
+      const isSelectedWeekCurrent = state.currentWeekData && state.selectedWeekNumber === state.currentWeekData.n;
+      const isSelectedWeekFuture = state.currentWeekData && state.selectedWeekNumber > state.currentWeekData.n;
+
+      if (isSelectedWeekFuture || (isSelectedWeekCurrent && subj.isUpcomingForContent)) {
+        isUpcoming = true;
+      }
+
+      const cardClasses = ['widget-card', 'subject-card'];
+      if (isUpcoming) {
+        cardClasses.push('is-upcoming');
+      }
+
+      const titleEl = el('h3', { className: 'widget-title', textContent: subj.name, classList: subj.icon ? 'has-icon' : '' });
+      if (subj.icon) {
+        titleEl.prepend(el('span', { className: 'material-symbols-outlined', textContent: subj.icon, style: 'color: var(--text-muted-color);' }));
+      }
+
+      const embedLinksContainer = createEmbedLinks(subj.weekButtons, true); // Truncate labels on home page
+
+      if (subj.weekType === 'ლექცია (ქვიზი)' || subj.weekType === 'შუალედური' || subj.weekType === 'პრეზენტაცია') {
+        const quizKey = `${subj.id}_${state.selectedWeekNumber}`;
+        const isChecked = state.quizCompletion[quizKey] === true;
+        const isPastWeek = state.currentWeekData && state.selectedWeekNumber < state.currentWeekData.n;
+
+        const quizCheckButton = el('button', { className: 'quiz-check-btn', title: 'ქვიზი დაწერილია' });
+        if (isChecked) {
+          quizCheckButton.classList.add('checked');
+        } else if (isPastWeek) {
+          quizCheckButton.classList.add('is-missed');
+          quizCheckButton.title = 'ქვიზი გამოტოვებულია';
+        }
+
+        quizCheckButton.append(el('span', { className: 'material-symbols-outlined', textContent: 'check' }));
+
+        quizCheckButton.onclick = (e) => {
+          const isCurrentlyChecked = quizCheckButton.classList.contains('checked');
+          const newState = !isCurrentlyChecked;
+
+          saveQuizStatus(subj.id, state.selectedWeekNumber, newState);
+
+          quizCheckButton.classList.toggle('checked', newState);
+          quizCheckButton.classList.remove('is-missed');
+          if (isPastWeek && !newState) {
+            quizCheckButton.classList.add('is-missed');
+          }
+          initSummaryWidget();
+          renderWeeksBar();
+        };
+        embedLinksContainer.append(quizCheckButton);
+      }
+
+      const subtitleEl = el('p', { className: 'widget-subtitle' });
+
+      if (subj.weekType === 'პრეზენტაცია' || subj.weekType === 'შუალედური') {
+        subtitleEl.className = 'widget-subtitle accent';
+        subtitleEl.textContent = subj.weekType;
+      } else if (subj.weekType === 'ლექცია (ქვიზი)') {
+        subtitleEl.innerHTML = `ლექცია (<b style="color: var(--accent-color); font-weight: 700;">ქვიზი</b>)`;
+      } else {
+        subtitleEl.textContent = subj.weekType || 'ლექცია';
+      }
+
+      const card = el('div', { className: cardClasses.join(' ') }, [
+        titleEl,
+        subtitleEl,
+        el('div', { className: 'topic', innerHTML: subj.weekTopic }),
+        embedLinksContainer
+      ]);
+      grid.append(card);
+    });
+  }
+
+  function renderResourcesPage() {
+    const grid = $('#resources-grid');
+    grid.innerHTML = '';
+
+    const todayDayIndex = new Date().getDay() === 0 ? 6 : new Date().getDay() - 1;
+
+    const subjectsWithGlobalButtons = state.selected.map(id => {
+      const subj = state.cache[id];
+      if (!subj || !subj.globalButtons || subj.globalButtons.length === 0) return null;
+
+      const dayData = state.userDays?.[id] ?? { day: null, time: null };
+
+      return {
+        ...subj,
+        dayIndex: daysOfWeek.indexOf(dayData.day),
+        time: dayData.time,
+        isScheduled: dayData.day !== null
+      };
+    }).filter(Boolean);
+
+    subjectsWithGlobalButtons.sort((a, b) => {
+      const aScheduled = a.dayIndex > -1;
+      const bScheduled = b.dayIndex > -1;
+
+      if (aScheduled && !bScheduled) return -1;
+      if (!aScheduled && bScheduled) return 1;
+      if (!aScheduled && !bScheduled) return a.name.localeCompare(b.name);
+
+      const isAUpcoming = a.dayIndex >= todayDayIndex;
+      const isBUpcoming = b.dayIndex >= todayDayIndex;
+
+      if (isAUpcoming !== isBUpcoming) return isAUpcoming ? -1 : 1;
+      if (a.dayIndex !== b.dayIndex) return a.dayIndex - b.dayIndex;
+      if (a.time && b.time) return a.time.localeCompare(b.time);
+
+      return a.name.localeCompare(b.name);
+    });
+
+    if (subjectsWithGlobalButtons.length === 0) {
+      grid.append(el('p', { className: 'empty-placeholder', textContent: 'არჩეულ საგნებს არ აქვს გლობალური რესურსები.' }));
+      return;
+    }
+
+    subjectsWithGlobalButtons.forEach(subj => {
+      const titleEl = el('h3', { className: 'widget-title', textContent: subj.name, classList: subj.icon ? 'has-icon' : '' });
+      if (subj.icon) {
+        titleEl.prepend(el('span', { className: 'material-symbols-outlined', textContent: subj.icon, style: 'color: var(--text-muted-color);' }));
+      }
+      const card = el('div', { className: 'widget-card' }, [
+        titleEl,
+        createEmbedLinks(subj.globalButtons)
+      ]);
+      grid.append(card);
+    });
+  }
+
+  function renderSettingsPage() {
+    const grid = $('#settings-grid');
+    grid.innerHTML = '';
+
+    const mySubjectsColumn = el('div', { className: 'settings-column' });
+    const catalogColumn = el('div', { className: 'settings-column' });
+    const sideColumn = el('div', { className: 'settings-column' });
+
+    const sortedSelected = state.selected.map(id => state.cache[id]).filter(Boolean).sort((a, b) => a.name.localeCompare(b.name));
+    const carouselContent = el('div', { className: 'subject-carousel-content' });
+
+    if (state.mySubjectCarouselIndex >= sortedSelected.length) {
+      state.mySubjectCarouselIndex = Math.max(0, sortedSelected.length - 1);
+    }
+
+    if (sortedSelected.length > 0) {
+      const currentSubject = sortedSelected[state.mySubjectCarouselIndex];
+      carouselContent.append(createMySubjectWidget(currentSubject, sortedSelected));
+    } else {
+      carouselContent.append(el('p', { className: 'empty-placeholder padded', textContent: 'საგნები არ არის არჩეული.' }));
+    }
+
+    const searchInput = el('input', { id: 'catalog-search', type: 'search', placeholder: 'საგნის მოძებნა...' });
+    const searchContainer = el('div', { className: 'search-input-container' }, [
+      el('span', { className: 'material-symbols-outlined', textContent: 'search' }),
+      searchInput
+    ]);
+
+    const catalogContent = el('div', { className: 'settings-widget-content no-padding-right' });
+
+    const renderCatalogItems = (filter = '') => {
+      const allSubjects = [...state.catalog, ...Object.values(state.cache).filter(s => s.isCustom)];
+
+      catalogContent.innerHTML = '';
+      let subjectsToShow;
+
+      if (filter) {
+        const sortedCatalog = allSubjects.sort((a, b) => a.name.localeCompare(b.name));
+        subjectsToShow = sortedCatalog.filter(subj => subj.name.toLowerCase().includes(filter.toLowerCase()));
+      } else {
+        // Show selected custom subjects first, then a random sample of others
+        const customSelected = allSubjects.filter(s => s.isCustom && state.selected.includes(s.id));
+        const otherSubjects = allSubjects.filter(s => !customSelected.includes(s));
+        const shuffled = otherSubjects.sort(() => 0.5 - Math.random());
+        subjectsToShow = shuffled.slice(0, 5);
+        subjectsToShow.unshift(...customSelected);
+      }
+
+      subjectsToShow.forEach(subj => {
+        const isAdded = state.selected.includes(subj.id);
+        let button;
+        const nameDiv = el('div', { className: 'name', textContent: subj.name });
+        const itemContainer = el('div', { className: 'settings-item' }, [nameDiv]);
+
+        if (isAdded) {
+          button = el('button', { className: 'action-btn added', disabled: true }, [el('span', { className: 'material-symbols-outlined', textContent: 'check' })]);
+        } else {
+          button = el('button', { className: 'action-btn' }, [el('span', { className: 'material-symbols-outlined', textContent: 'add' })]);
+          button.onclick = () => {
+            state.selected.push(subj.id);
+            state.userDays[subj.id] = { day: daysOfWeek[0], time: "09:00" };
+            autoSave();
+            renderSettingsPage();
+          };
+        }
+
+        if (subj.isCustom) {
+          nameDiv.prepend(el('span', { className: 'material-symbols-outlined', textContent: 'person', style: 'font-size: 1.2rem; margin-right: 8px; color: var(--text-muted-color);' }));
+        }
+
+        itemContainer.append(button);
+        catalogContent.append(itemContainer);
+      });
+    };
+
+    searchInput.oninput = () => renderCatalogItems(searchInput.value);
+    renderCatalogItems();
+
+    const catalogCard = el('div', { id: 'catalog-widget', className: 'widget-card' }, [
+      el('h3', { className: 'widget-title', textContent: 'საგნების კატალოგი' }),
+      searchContainer,
+      catalogContent
+    ]);
+
+    mySubjectsColumn.append(carouselContent);
+    catalogColumn.append(catalogCard);
+    sideColumn.append(createDurationWidget());
+    sideColumn.append(createThemeWidget());
+    sideColumn.append(createLogoutWidget());
+
+    grid.append(mySubjectsColumn, catalogColumn, sideColumn);
+  }
+
+  function renderEditorPage() {
+    const grid = $('#editor-grid');
+    grid.innerHTML = '';
+
+    const leftCol = el('div', { className: 'editor-column' });
+    const midCol = el('div', { className: 'editor-column' });
+    const rightCol = el('div', { className: 'editor-column' });
+
+    // --- LEFT COLUMN: My Subjects Catalog ---
+    const mySubjectsList = el('div', { className: 'my-subjects-list' });
+    const customSubjects = Object.values(state.cache).filter(s => s.isCustom).sort((a, b) => a.name.localeCompare(b.name));
+
+    if (customSubjects.length > 0) {
+      if (!state.selectedCustomSubjectId || !state.cache[state.selectedCustomSubjectId]?.isCustom) {
+        state.selectedCustomSubjectId = customSubjects[0].id;
+      }
+      customSubjects.forEach(subj => {
+        const nameEl = el('div', { className: 'subject-name', textContent: subj.name });
+        nameEl.onclick = () => {
+          if (state.editorIsDirty) {
+            if (!confirm("You have unsaved changes. Are you sure you want to switch subjects? Your changes will be lost.")) {
+              return;
+            }
+          }
+          state.editorIsDirty = false; // Reset dirty state when switching
+          state.selectedCustomSubjectId = subj.id;
+          // --- Set editor to current week when subject is chosen ---
+          if (state.currentWeekData) {
+            state.selectedEditorWeek = state.currentWeekData.n;
+          } else {
+            state.selectedEditorWeek = 1;
+          }
+          renderEditorPage();
+        };
+
+        const deleteBtn = el('button', { className: 'editor-delete-subject-btn' }, [
+          el('span', { className: 'material-symbols-outlined', textContent: 'delete' })
+        ]);
+
+        deleteBtn.onclick = (e) => {
+          e.stopPropagation(); // Prevent the item's click event from firing
+          if (confirm(`დარწმუნებული ხართ, რომ გსურთ საგნის "${subj.name}" წაშლა? ეს მოქმედება შეუქცევადია.`)) {
+            // Remove from selected list
+            state.selected = state.selected.filter(id => id !== subj.id);
+            // Remove from day/time settings
+            delete state.userDays[subj.id];
+            // Remove from local cache
+            delete state.cache[subj.id];
+
+            // Trigger saves
+            deleteCustomSubjectFromDB(subj.id);
+            autoSave(); // Saves the updated 'selected' and 'userDays' arrays
+
+            // Re-render relevant pages
+            renderEditorPage();
+            renderSettingsPage();
+          }
+        };
+
+        const item = el('div', { className: 'my-subject-item' }, [nameEl, deleteBtn]);
+        if (subj.id === state.selectedCustomSubjectId) {
+          item.classList.add('active');
+        }
+        mySubjectsList.append(item);
+      });
+    } else {
+      mySubjectsList.append(el('p', { className: 'empty-placeholder padded', textContent: 'საკუთარი საგანი არ გაქვთ შექმნილი.' }));
+    }
+
+    const createBtn = el('button', { className: 'create-subject-btn', textContent: 'ახალი საგნის შექმნა' });
+    createBtn.onclick = () => {
+      const newName = prompt("შეიყვანეთ ახალი საგნის სახელი:");
+      if (newName && newName.trim() !== "") {
+        const newId = `custom_${Date.now()}`;
+        const newSubject = {
+          id: newId,
+          name: newName.trim(),
+          isCustom: true,
+          weeks: [],
+          globalButtons: [],
+          // Add a temporary flag to indicate it's new and needs a full save
+          // This is a bit of a workaround for how Firestore updates work.
+          // We'll save the whole customSubjects object once.
+        };
+        state.cache[newId] = newSubject;
+        if (!state.selected.includes(newId)) {
+          state.selected.push(newId);
+        }
+        state.selectedCustomSubjectId = newId;
+        saveCustomSubjects();
+        saveSettings(); // to save the `selected` array
+        renderEditorPage();
+      }
+    };
+
+    leftCol.append(el('div', { className: 'my-subjects-catalog' }, [
+      el('h3', { className: 'widget-title' }, [document.createTextNode('ჩემი საგნების კატალოგი')]),
+      mySubjectsList,
+      createBtn
+    ]));
+
+    // --- MIDDLE COLUMN: Week Selector ---
+    const globalBtn = el('div', { className: 'editor-week-item global-btn', textContent: 'Global' });
+    if (state.selectedEditorWeek === 'global') {
+      globalBtn.classList.add('active');
+    }
+    globalBtn.onclick = () => {
+      state.selectedEditorWeek = 'global';
+      renderEditorPage();
+    };
+
+    const weekGrid = el('div', { className: 'editor-week-grid' });
+    SEMESTER_WEEKS.forEach(week => {
+      const item = el('div', { className: 'editor-week-item', textContent: week.n });
+      if (week.n === state.selectedEditorWeek) {
+        item.classList.add('active');
+      }
+      item.onclick = () => {
+        state.selectedEditorWeek = week.n;
+        renderEditorPage();
+      };
+      weekGrid.append(item);
+    });
+
+    midCol.append(el('div', { className: 'editor-week-selector' }, [
+      el('button', {
+        id: 'editor-apply-btn',
+        className: `apply-btn ${state.editorIsDirty ? 'is-dirty' : ''}`,
+        textContent: 'Apply',
+        onclick: saveCustomSubjects }),
+      globalBtn,
+      weekGrid
+    ]));
+
+    // --- RIGHT COLUMN: Content Editor ---
+    const contentPanel = el('div', { className: 'editor-content-panel' });
+    const selectedSubject = state.cache[state.selectedCustomSubjectId];
+
+    if (selectedSubject) {
+      const isGlobal = state.selectedEditorWeek === 'global';
+      const weekData = isGlobal ? null : selectedSubject.weeks?.find(w => w.week === state.selectedEditorWeek);
+
+      // Subject Name Editor
+      const nameInput = el('input', { type: 'text', value: selectedSubject.name });
+      nameInput.oninput = () => {
+        selectedSubject.name = nameInput.value;
+        markEditorAsDirty();
+        // No need to re-render the whole page, just update the list item text
+        const activeItem = $('.my-subject-item.active');
+        if (activeItem) activeItem.textContent = nameInput.value;
+      };
+      contentPanel.append(el('div', { className: 'form-group' }, [el('label', { textContent: 'საგნის სახელი' }), nameInput]));
+
+      if (!isGlobal) {
+        // Topic Editor
+        const topicInput = el('textarea', { placeholder: 'შეიყვანეთ თემა...', value: weekData?.topic || '' });
+        topicInput.oninput = () => {
+          let currentWeek = selectedSubject.weeks.find(w => w.week === state.selectedEditorWeek);
+          if (!currentWeek) {
+            currentWeek = { week: state.selectedEditorWeek };
+            selectedSubject.weeks.push(currentWeek);
+          }
+          currentWeek.topic = topicInput.value;
+          markEditorAsDirty();
+        };
+        contentPanel.append(el('div', { className: 'form-group' }, [el('label', { textContent: `კვირა ${state.selectedEditorWeek} - თემა` }), topicInput]));
+
+        // Type Editor
+        const typeSelect = el('select');
+        const types = ['ლექცია', 'ლექცია (ქვიზი)', 'პრეზენტაცია', 'შუალედური', 'დასვენება'];
+        types.forEach(t => typeSelect.append(el('option', { value: t, textContent: t, selected: t === (weekData?.type || 'ლექცია') })));
+        typeSelect.onchange = () => {
+          let currentWeek = selectedSubject.weeks.find(w => w.week === state.selectedEditorWeek);
+          if (!currentWeek) {
+            currentWeek = { week: state.selectedEditorWeek };
+            selectedSubject.weeks.push(currentWeek);
+          }
+          currentWeek.type = typeSelect.value;
+          markEditorAsDirty();
+        };
+        contentPanel.append(el('div', { className: 'form-group' }, [el('label', { textContent: 'ტიპი' }), typeSelect]));
+      }
+
+      // --- Button Editor ---
+      let buttonsToEdit;
+      let title;
+
+      if (isGlobal) {
+        if (!selectedSubject.globalButtons) {
+          selectedSubject.globalButtons = [];
+        }
+        buttonsToEdit = selectedSubject.globalButtons;
+        title = "Global ღილაკები";
+      } else {
+        if (!weekData) {
+          // Ensure week data exists before trying to access buttons
+          selectedSubject.weeks.push({ week: state.selectedEditorWeek, buttons: [] });
+          buttonsToEdit = selectedSubject.weeks.find(w => w.week === state.selectedEditorWeek).buttons;
+        } else {
+          if (!weekData.buttons) {
+            weekData.buttons = [];
+          }
+          buttonsToEdit = weekData.buttons;
+        }
+        title = `კვირა ${state.selectedEditorWeek} - ღილაკები`;
+      }
+
+      const onButtonUpdate = () => {
+        markEditorAsDirty();
+        renderEditorPage(); // Re-render immediately to show UI changes (like disabled state)
+      };
+
+      contentPanel.append(createButtonEditor(title, buttonsToEdit, onButtonUpdate));
+
+    } else {
+      contentPanel.append(el('p', { className: 'empty-placeholder', textContent: 'აირჩიეთ საგანი რედაქტირებისთვის.' }));
+    }
+    rightCol.append(contentPanel);
+
+    grid.append(leftCol, midCol, rightCol);
+  }
+
+  function createButtonEditor(title, buttonsArray, onUpdate) {
+    const container = el('div', { className: 'button-editor-container' });
+    const list = el('div', { className: 'button-editor-list' });
+
+    const renderItems = () => {
+      list.innerHTML = '';
+      buttonsArray.forEach((button, index) => {
+disabled: button.type !== 'custom'
+        const labelInput = el('input', {
+          type: 'text',
+          placeholder: 'Label',
+          value: button.label || '',
+          disabled: button.type !== 'custom' // Disable if not custom
+        });
+        const linkInput = el('input', { type: 'text', placeholder: 'Link URL', value: button.link || '' });
+        const typeSelect = el('select');
+        const types = ['slide', 'video', 'book', 'custom'];
+        types.forEach(t => typeSelect.append(el('option', { value: t, textContent: t, selected: t === button.type })));
+
+        const debouncedSave = () => {
+          clearTimeout(button.saveTimeout);
+          button.saveTimeout = setTimeout(onUpdate, 500);
+        };
+
+        labelInput.oninput = () => {
+          if (button.type === 'custom') { // Only allow editing if type is custom
+            button.label = labelInput.value;
+            debouncedSave();
+          }
+        };
+        linkInput.oninput = () => { button.link = linkInput.value; debouncedSave(); };
+        typeSelect.onchange = () => { button.type = typeSelect.value; onUpdate(); };
+
+        const deleteBtn = el('button', { className: 'delete-btn' }, [
+          el('span', { className: 'material-symbols-outlined', textContent: 'delete' })
+        ]);
+        deleteBtn.onclick = () => {
+          if (confirm(`დარწმუნებული ხართ რომ გსურთ წაშალოთ "${button.label || 'ეს ღილაკი'}"?`)) {
+            buttonsArray.splice(index, 1);
+            onUpdate();
+          }
+        };
+
+        const item = el('div', { className: 'button-editor-item' }, [
+          labelInput,
+          linkInput,
+          typeSelect,
+          deleteBtn
+        ]);
+        list.append(item);
+      });
+    };
+
+    const addBtn = el('button', { className: 'add-btn', textContent: 'ახალი ლინკის დამატება' });
+    addBtn.onclick = () => {
+      buttonsArray.push({ label: 'New Link', link: '', type: 'custom' });
+      onUpdate();
+    };
+
+    container.append(
+      el('h4', { className: 'widget-title', textContent: title }),
+      list,
+      addBtn
+    );
+
+    renderItems();
+    return container;
+  }
+
+  function createMySubjectWidget(subj, sortedSelected) {
+    const lectureStartTimes = ["09:00", "11:20", "13:40", "16:00", "18:20"].sort();
+    const dayAbbreviations = ["ორშ", "სამ", "ოთხ", "ხუთ", "პარ", "შაბ"];
+    const currentDay = state.userDays[subj.id]?.day;
+
+    const timeSelect = el('select', { className: 'day-time-select' });
+    lectureStartTimes.forEach(time => {
+      const opt = el('option', { value: time, textContent: time });
+      if (state.userDays[subj.id]?.time === time) opt.selected = true;
+      timeSelect.append(opt);
+    });
+    timeSelect.onchange = () => {
+      if (!state.userDays[subj.id]) state.userDays[subj.id] = { day: null, time: null };
+      state.userDays[subj.id].time = timeSelect.value;
+      autoSave();
+    };
+
+    const weekdayContainer = el('div', { className: 'weekday-chooser' });
+    daysOfWeek.forEach((day, index) => {
+      const dayBtn = el('button', {
+        className: 'weekday-btn',
+        textContent: dayAbbreviations[index],
+        title: day
+      });
+      if (currentDay === day) {
+        dayBtn.classList.add('active');
+      }
+      dayBtn.onclick = () => {
+        if (!state.userDays[subj.id]) state.userDays[subj.id] = { day: null, time: null };
+        if (state.userDays[subj.id].day !== day) {
+          state.userDays[subj.id].day = day;
+          autoSave();
+          renderSettingsPage();
+        }
+      };
+      weekdayContainer.append(dayBtn);
+    });
+
+    const removeBtn = el('button', { className: 'action-btn remove' }, [
+      el('span', { className: 'material-symbols-outlined', textContent: 'close' })
+    ]);
+    removeBtn.onclick = () => {
+      const subjectToRemove = state.cache[subj.id];
+
+      // Filter from selected list
+      state.selected = state.selected.filter(id => id !== subj.id);
+      delete state.userDays[subj.id];
+
+      // If it's a custom subject, remove it from cache and database
+      if (subjectToRemove?.isCustom) {
+        delete state.cache[subj.id];
+        // This will trigger a save that removes the subject from the DB
+        deleteCustomSubjectFromDB(subj.id);
+      }
+
+      autoSave();
+      renderSettingsPage();
+      renderEditorPage(); // Re-render editor to reflect removal
+    };
+
+    const prevBtn = el('button', { className: 'subject-carousel-nav-btn' }, [el('span', { className: 'material-symbols-outlined', textContent: 'arrow_back_ios_new' })]);
+    const nextBtn = el('button', { className: 'subject-carousel-nav-btn' }, [el('span', { className: 'material-symbols-outlined', textContent: 'arrow_forward_ios' })]);
+
+    prevBtn.onclick = () => {
+      state.mySubjectCarouselIndex = (state.mySubjectCarouselIndex - 1 + sortedSelected.length) % sortedSelected.length;
+      renderSettingsPage();
+    };
+    nextBtn.onclick = () => {
+      state.mySubjectCarouselIndex = (state.mySubjectCarouselIndex + 1) % sortedSelected.length;
+      renderSettingsPage();
+    };
+
+    const navContainer = el('div', { className: 'subject-carousel-nav-container' }, [prevBtn, nextBtn]);
+
+    return el('div', { className: 'widget-card my-subject-widget' }, [
+      el('div', { className: 'my-subject-widget-header' }, [
+        el('h3', { className: 'widget-title', textContent: subj.name }),
+        removeBtn,
+      ]),
+      weekdayContainer,
+      timeSelect,
+      navContainer
+    ]);
+  }
+
+  function createDurationWidget() {
+    const [initialHour, initialMinute] = state.lectureDuration.split(':');
+
+    const hourSelect = el('select', { className: 'day-time-select' });
+    for (let i = 0; i <= 4; i++) {
+      hourSelect.append(el('option', { value: i, textContent: `${i} სთ`, selected: i == initialHour }));
+    }
+
+    const minuteSelect = el('select', { className: 'day-time-select' });
+    for (let i = 0; i <= 55; i += 5) {
+      minuteSelect.append(el('option', { value: i, textContent: `${i} წთ`, selected: i == initialMinute }));
+    }
+
+    const updateDuration = () => {
+      state.lectureDuration = `${hourSelect.value}:${minuteSelect.value}`;
+      autoSave();
+    };
+    hourSelect.onchange = updateDuration;
+    minuteSelect.onchange = updateDuration;
+
+    const container = el('div', { className: 'duration-selector' }, [hourSelect, minuteSelect]);
+    return el('div', { className: 'widget-card' }, [
+      el('h3', { className: 'widget-title', textContent: 'ლექციის ხანგრძლივობა' }),
+      container
+    ]);
+  }
+
+  function createThemeWidget() {
+    const themeOptions = Object.keys(THEMES).map(themeName => {
+      const theme = THEMES[themeName];
+      const option = el('div', { className: 'theme-option' }, [
+        el('div', { className: 'name', textContent: themeName }),
+        el('div', { className: 'swatches' }, [
+          el('div', { className: 'swatch', style: `background-color: ${theme.bg}` }),
+          el('div', { className: 'swatch', style: `background-color: ${theme.widget}` }),
+          el('div', { className: 'swatch', style: `background-color: ${theme.accent}` }),
+        ])
+      ]);
+      if (themeName === state.userThemeName) {
+        option.classList.add('active');
+      }
+      option.onclick = () => {
+        saveTheme(themeName);
+        renderSettingsPage();
+      };
+      return option;
+    });
+
+    return el('div', { className: 'widget-card theme-selector' }, [
+      el('h3', { className: 'widget-title', textContent: 'თემის არჩევა' }),
+      el('div', { className: 'themes' }, themeOptions)
+    ]);
+  }
+
+  function createLogoutWidget() {
+    const logoutButton = el('button', {
+      className: 'logout-button',
+      textContent: 'გასვლა'
+    });
+    logoutButton.onclick = async () => {
+      try {
+        await state.auth.signOut();
+        location.reload();
+      } catch (error) {
+        console.error("Error signing out:", error);
+      }
+    };
+    return el('div', { className: 'widget-card' }, [logoutButton]);
+  }
+
+  /* === INITIALIZATION & EVENT LISTENERS === */
+
+  function initNavigation() {
+    const navItems = $$('.nav-item');
+    const views = $$('.view');
+    const pageTitle = $('#page-title');
+
+    document.body.dataset.activeView = 'live-view';
+
+    navItems.forEach(item => {
+      item.addEventListener('click', () => {
+        const viewId = item.dataset.view;
+
+        navItems.forEach(i => i.classList.remove('active'));
+        item.classList.add('active');
+
+        views.forEach(v => v.classList.remove('active'));
+        $(`#${viewId}`).classList.add('active');
+
+        pageTitle.textContent = item.dataset.title;
+        document.body.dataset.activeView = viewId;
+      });
+    });
+  }
+
+  async function bootAfterLogin() {
+    await loadData();
+    flattenWeeks();
+    initCurrentWeek();
+
+    renderWeeksBar();
+    renderHomePage();
+    renderResourcesPage();
+    renderSettingsPage();
+    renderEditorPage();
+
+    initLiveTime();
+    initSummaryWidget();
+    initNavigation();
+  }
+
+  function initAuth() {
+    state.auth.onAuthStateChanged(async u => {
+      state.user = u || null;
+      const loginOverlay = $("#login-overlay");
+      const loadingOverlay = $("#loadingOverlay");
+      try {
+        if (state.user) {
+          loginOverlay.style.display = "none";
+          await bootAfterLogin();
+        } else {
+          loginOverlay.style.display = "flex";
+        }
+      } catch (error) {
+        console.error("Bootstrapping failed:", error);
+        loadingOverlay.innerHTML = `<h2 style='color:red;text-align:center;margin-top:30vh;'>⚠️ აპლიკაციის ჩატვირთვა ვერ მოხერხდა.</h2><p style='color:var(--text-muted-color)'>${error.message}</p>`;
+      } finally {
+        loadingOverlay.classList.add("hidden");
+      }
+    });
+
+    $("#signInBtn").onclick = async () => {
+      const provider = new firebase.auth.GoogleAuthProvider();
+      try {
+        await state.auth.signInWithPopup(provider);
+      } catch (err) {
+        console.error("Sign-in error:", err);
+        let userMessage = "Sign-in failed. Please try again.";
+        if (err.code === 'auth/popup-closed-by-user') {
+          return;
+        } else if (err.code === 'auth/popup-blocked') {
+          userMessage = "Sign-in popup was blocked by the browser. Please allow popups for this site and try again.";
+        } else {
+          userMessage = `Sign-in failed: ${err.message}`;
+        }
+        alert(userMessage);
+      }
+    };
+  }
+
+  function main() {
+    const loadingOverlay = $("#loadingOverlay");
+    fetch("https://raw.githubusercontent.com/WEEKGE/live/main/config.json")
+      .then(r => r.json())
+      .then(cfg => {
+        firebase.initializeApp(cfg);
+        state.auth = firebase.auth();
+        state.db = firebase.firestore();
+        initAuth();
+      })
+      .catch(() => {
+        loadingOverlay.innerHTML = "<h2 style='color:red;text-align:center;margin-top:30vh;'>⚠️ config.json ვერ ჩაიტვირთა.</h2>";
+      });
+  }
+
+  // Start the application
+  main();
+
+})();
