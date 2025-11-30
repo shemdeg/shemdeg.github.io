@@ -768,16 +768,24 @@
       catalogContent.innerHTML = '';
       let subjectsToShow;
 
+      // Sort all subjects by: 1. Added status, 2. Custom status, 3. Name
+      allSubjects.sort((a, b) => {
+        const isAddedA = state.selected.includes(a.id);
+        const isAddedB = state.selected.includes(b.id);
+        if (isAddedA !== isAddedB) return isAddedA ? -1 : 1; // Added subjects first
+
+        const isCustomA = a.isCustom || false;
+        const isCustomB = b.isCustom || false;
+        if (isCustomA !== isCustomB) return isCustomA ? -1 : 1; // Custom subjects first within their group
+
+        return a.name.localeCompare(b.name); // Finally, sort by name
+      });
+
       if (filter) {
-        const sortedCatalog = allSubjects.sort((a, b) => a.name.localeCompare(b.name));
-        subjectsToShow = sortedCatalog.filter(subj => subj.name.toLowerCase().includes(filter.toLowerCase()));
+        subjectsToShow = allSubjects.filter(s => s.name.toLowerCase().includes(filter.toLowerCase()));
       } else {
-        // Show selected custom subjects first, then a random sample of others
-        const customSelected = allSubjects.filter(s => s.isCustom && state.selected.includes(s.id));
-        const otherSubjects = allSubjects.filter(s => !customSelected.includes(s));
-        const shuffled = otherSubjects.sort(() => 0.5 - Math.random());
-        subjectsToShow = shuffled.slice(0, 5);
-        subjectsToShow.unshift(...customSelected);
+        const addedCount = state.selected.length;
+        subjectsToShow = [...allSubjects.slice(0, addedCount), ...allSubjects.slice(addedCount, addedCount + 5)];
       }
 
       subjectsToShow.forEach(subj => {
@@ -787,7 +795,16 @@
         const itemContainer = el('div', { className: 'settings-item' }, [nameDiv]);
 
         if (isAdded) {
-          button = el('button', { className: 'action-btn added', disabled: true }, [el('span', { className: 'material-symbols-outlined', textContent: 'check' })]);
+          button = el('button', { className: 'action-btn remove-from-catalog' }, [el('span', { className: 'material-symbols-outlined', textContent: 'close' })]);
+          button.onclick = () => {
+            // Filter from selected list
+            state.selected = state.selected.filter(id => id !== subj.id);
+            delete state.userDays[subj.id];
+
+            autoSave();
+            renderSettingsPage();
+            renderEditorPage();
+          };
         } else {
           button = el('button', { className: 'action-btn' }, [el('span', { className: 'material-symbols-outlined', textContent: 'add' })]);
           button.onclick = () => {
@@ -840,6 +857,12 @@
     if (customSubjects.length > 0) {
       if (!state.selectedCustomSubjectId || !state.cache[state.selectedCustomSubjectId]?.isCustom) {
         state.selectedCustomSubjectId = customSubjects[0].id;
+        // --- Set editor to current week on initial load ---
+        if (state.currentWeekData) {
+          state.selectedEditorWeek = state.currentWeekData.n;
+        } else {
+          state.selectedEditorWeek = 1;
+        }
       }
       customSubjects.forEach(subj => {
         const nameEl = el('div', { className: 'subject-name', textContent: subj.name });
@@ -994,7 +1017,7 @@
 
         // Type Editor
         const typeSelect = el('select');
-        const types = ['ლექცია', 'ლექცია (ქვიზი)', 'პრეზენტაცია', 'შუალედური', 'დასვენება'];
+        const types = ['ლექცია', 'ლექცია (ქვიზი)', 'პრეზენტაცია', 'შუალედური'];
         types.forEach(t => typeSelect.append(el('option', { value: t, textContent: t, selected: t === (weekData?.type || 'ლექცია') })));
         typeSelect.onchange = () => {
           let currentWeek = selectedSubject.weeks.find(w => w.week === state.selectedEditorWeek);

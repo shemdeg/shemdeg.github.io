@@ -443,6 +443,17 @@ body[data-active-view="live-view"] #live-view {
   border: 1px solid var(--accent-color);
   cursor: default;
 }
+.settings-item .action-btn.remove-from-catalog {
+  background-color: transparent;
+  color: var(--text-muted-color);
+  border: 1px solid var(--text-muted-color);
+  cursor: pointer;
+}
+.settings-item .action-btn.remove-from-catalog:hover {
+  background-color: #B00020;
+  color: white;
+  border-color: #B00020;
+}
 .widget-card .action-btn.remove { 
   background-color: var(--accent-color); 
   color: var(--text-on-accent-color); 
@@ -1192,6 +1203,10 @@ body[data-active-view="live-view"] #weeks-bar-container {
 .editor-content-panel textarea {
   min-height: 120px;
   resize: vertical;
+}
+.editor-content-panel select option {
+  background-color: var(--widget-color);
+  color: var(--text-color);
 }
 
 @media screen and (max-width: 1000px) {
