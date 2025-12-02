@@ -26,6 +26,8 @@
     font-style: normal;
 }
 
+
+
 :root {
   --bg-color: #121212;
   --widget-color: #1E1E1E;
@@ -36,6 +38,7 @@
   --text-on-accent-color: #000000;
   --border-radius: 16px;
   --font-family: "TBCContractica", sans-serif;
+  -webkit-tap-highlight-color: transparent;
 }
 
 * {
@@ -927,7 +930,7 @@ body[data-active-view="live-view"] #live-view {
   height: 22px;
   display: grid;
   place-items: center;
-  font-size: 0.1rem;
+  font-size: 0.7rem;
   font-weight: 700;
   padding-top: 5px;
   line-height: 0;
