@@ -123,8 +123,8 @@ header h1 {
 }
 
 @keyframes pulse-opacity {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
+  0%, 100% { filter: brightness(1); }
+  50% { filter: brightness(0.9); }
 }
 
 
@@ -191,6 +191,8 @@ body[data-active-view="live-view"] #live-view {
 }
 .widget-title.has-icon .material-symbols-outlined {
   color: var(--text-muted-color);
+  margin-right: 8px;
+  vertical-align: bottom;
 }
 
 .widget-subtitle {
@@ -201,6 +203,37 @@ body[data-active-view="live-view"] #live-view {
 
 .widget-subtitle.accent {
   color: var(--accent-color);
+  font-weight: 700;
+}
+
+.subject-card-header {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 15px;
+}
+
+.subject-title {
+  font-size: 1.2rem;
+  font-weight: 500;
+  color: var(--text-color);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.subject-title .material-symbols-outlined {
+  color: var(--text-muted-color);
+}
+
+.day-circle {
+  width: 50px; height: 50px; border-radius: 12px;
+  background-color: color-mix(in srgb, var(--text-color) 5%, transparent);
+  display: grid; place-items: center; font-weight: 500; font-size: 0.8rem; padding-top: 3px;
+}
+
+.subject-card.is-upcoming .day-circle {
+  background-color: var(--accent-color);
+  color: var(--text-on-accent-color);
   font-weight: 700;
 }
 
@@ -220,12 +253,16 @@ body[data-active-view="live-view"] #live-view {
 }
 
 .quiz-check-btn {
+  background-color: color-mix(in srgb, var(--text-color) 5%, transparent);
+  color: var(--text-color);
   background-color: var(--accent-color);
   color: var(--text-on-accent-color);
   cursor: pointer;
   display: grid;
   place-items: center;
   transition: all 0.2s ease;
+  min-width: 50px;
+  min-height: 50px;
   width: 50px;
   height: 50px;
   border-radius: 50%;
@@ -237,7 +274,10 @@ body[data-active-view="live-view"] #live-view {
   filter: brightness(1.1);
 }
 .quiz-check-btn.checked {
-  background-color: color-mix(in srgb, var(--text-color) 8%, transparent);
+  background-color: var(--accent-color);
+  color: var(--text-on-accent-color);
+  background-color: color-mix(in srgb, var(--text-color) 5%, transparent);
+  color: var(--accent-color);
   color: var(--text-muted-color);
 }
 .quiz-check-btn.is-missed {
@@ -315,19 +355,40 @@ body[data-active-view="live-view"] #live-view {
   overflow: hidden;
 }
 .subject-card .embed-links {
-  display: flex;
-  gap: 15px;
+  display: grid;
+  grid-auto-flow: dense;
+  gap: 12px;
   margin-top: auto; /* Pushes to bottom */
   padding-top: 10px;
 }
+
+/* Default for Resources page */
+#resources-grid .embed-links {
+  grid-template-columns: repeat(4, 1fr);
+}
+
+/* Specific for Home page to accommodate the check button */
+#home-grid .embed-links {
+  grid-template-columns: repeat(4, 1fr);
+}
+
 .embed-link {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 8px;
   text-decoration: none;
   color: var(--text-muted-color);
   transition: color 0.2s ease;
+  min-width: 0;
+  min-height: 50px; /* Ensure a minimum height for all items */
+}
+.embed-link.span-1 {
+  grid-column: span 1;
+  flex-direction: column;
+  gap: 8px;
+}
+.embed-link.span-2 {
+  grid-column: span 2;
+  flex-direction: row;
 }
 .embed-link.is-custom {
   flex-direction: row; /* For custom links, align horizontally */
@@ -345,15 +406,18 @@ body[data-active-view="live-view"] #live-view {
   transition: background-color 0.2s ease;
 }
 .embed-link .icon-circle.is-custom {
-  width: auto; /* Auto-width for custom links */
+  width: 100%; /* Fill available space */
   border-radius: 25px; /* Pill shape */
-  padding: 0 24px 0 20px;
+  padding: 0 16px;
   display: flex;
   align-items: center;
   gap: 10px;
+  height: 50px;
 }
 .embed-link .icon-circle.is-custom .label {
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .embed-link:hover .icon-circle {
   background-color: var(--accent-color);
@@ -425,6 +489,12 @@ body[data-active-view="live-view"] #live-view {
   border-bottom: 1px solid rgba(255,255,255,0.05);
   flex-wrap: wrap;
 }
+.settings-item .name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .settings-item:last-child { border-bottom: none; }
 .settings-item .name { flex-grow: 1; font-weight: 500; }
 .settings-item .action-btn {
@@ -561,28 +631,48 @@ body[data-active-view="live-view"] #live-view {
   color: var(--bg-color);
 }
 .subject-carousel-content {
-  flex-grow: 1; /* Allow the content area to fill vertical space */
-  display: flex; /* Make it a flex container */
-  flex-direction: column; /* Stack children vertically */
-  min-height: 0; /* Necessary for flex-grow in some browsers */
+  flex-grow: 1;
+  min-width: 0; /* Prevent flex item from overflowing */
+  animation: fadeIn 0.3s ease-in-out;
+}
+.subject-carousel-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 10px;
   width: 100%;
 }
-.subject-carousel-nav-container {
-  display: flex;
-  gap: 10px;
-  margin-top: 10px;
-}
 .subject-carousel-nav-btn {
-  background: color-mix(in srgb, var(--text-color) 10%, transparent);
-  border: none; color: var(--text-color); border-radius: 12px;
-  height: 60px; cursor: pointer; display: grid; place-items: center;
-  flex: 1; /* Make buttons grow to fill space */
+  background: color-mix(in srgb, var(--text-color) 5%, transparent);
+  border: none;
+  color: var(--text-color);
+  border-radius: 12px;
+  width: 50px;
+  height: 50px;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
   transition: background-color 0.2s ease;
-  padding: 4px;
 }
 
 .subject-carousel-nav-btn:hover {
-  background: #ffffff20;
+  background: color-mix(in srgb, var(--text-color) 10%, transparent);
+}
+
+.subject-carousel-nav-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+  background: color-mix(in srgb, var(--text-color) 2%, transparent);
+}
+
+@media screen and (max-width: 1000px) {
+  .subject-carousel-wrapper {
+    gap: 8px;
+  }
+  .subject-carousel-nav-btn {
+    width: 44px;
+    height: 44px;
+  }
 }
 
 .settings-widget-content { flex-grow: 1; min-height: 0; overflow-y: auto; padding-right: 5px; }
@@ -756,6 +846,7 @@ body[data-active-view="live-view"] #live-view {
   white-space: nowrap;
   font-family: "TBCContractica", sans-serif;
   position: relative;
+  box-shadow: 0 0 0 5px var(--bg-color);
 }
 .week-button.is-current.active {
   color: var(--text-on-accent-color); /* Ensure text is white when it's the active current week */
@@ -767,7 +858,9 @@ body[data-active-view="live-view"] #live-view {
 }
 .week-button.is-current { 
   border: 1px solid var(--accent-color); color: var(--accent-color); animation: pulse-opacity 2.5s ease-in-out infinite; 
+  border: 1px solid var(--accent-color); color: var(--accent-color); 
 }
+.week-button.is-current { border: 1px solid var(--accent-color); color: var(--accent-color); }
 
 .empty-placeholder {
   text-align: center;
@@ -944,7 +1037,6 @@ body[data-active-view="live-view"] #weeks-bar-container {
   flex-direction: column;
   align-items: stretch;
   gap: 15px;
-  flex-grow: 1;
   display: flex;
 }
 
@@ -1139,6 +1231,7 @@ body[data-active-view="live-view"] #weeks-bar-container {
 
 .editor-week-item.global-btn {
   margin-bottom: 10px;
+  background-color: color-mix(in srgb, var(--text-color) 5%, transparent);
 }
 .editor-week-item {
   padding: 12px;
@@ -1161,6 +1254,17 @@ body[data-active-view="live-view"] #weeks-bar-container {
   grid-template-columns: 1fr 1fr;
   gap: 10px;
   flex-grow: 1;
+  position: relative;
+  margin-top: 25px; /* Add space for the title */
+}
+
+.editor-week-grid::before {
+  content: 'კვირები';
+  position: absolute;
+  top: -20px; /* Position it above the grid */
+  left: 0;
+  font-size: 0.9rem;
+  color: var(--text-muted-color);
 }
 
 .editor-week-grid .editor-week-item {

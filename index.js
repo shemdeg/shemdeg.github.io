@@ -53,9 +53,11 @@
     editorIsDirty: false,
     selectedCustomSubjectId: null,
     selectedEditorWeek: 1,
+    nextUpdateTimeout: null,
   };
 
   const daysOfWeek = ["ორშაბათი", "სამშაბათი", "ოთხშაბათი", "ხუთშაბათი", "პარასკევი", "შაბათი"];
+  const dayAbbreviations = ["ორშ", "სამ", "ოთხ", "ხუთ", "პარ", "შაბ"];
   const todayISO = () => new Date().toISOString().slice(0, 10);
   const isBetween = (d, s, e) => d >= s && d <= e;
 
@@ -190,6 +192,18 @@
     }
   }
 
+  async function saveNewSubject(subject) {
+    if (state.user && subject) {
+      try {
+        const path = `customSubjects.${subject.id}`;
+        await state.db.collection("users").doc(state.user.uid).update({
+          [path]: subject
+        });
+        console.log("New subject saved:", subject.name);
+      } catch (error) { console.error("Error saving new subject:", error); }
+    }
+  }
+
   async function deleteCustomSubjectFromDB(subjectId) {
     if (state.user && subjectId) {
       try {
@@ -260,22 +274,21 @@
   function isSubjectEnded(subject, currentTime, durationMs) {
     if (!subject.time || subject.dayIndex === -1 || subject.dayIndex === undefined) return false;
 
-    const nowDayIndex = currentTime.getDay() === 0 ? 6 : currentTime.getDay() - 1;
-
-    if (subject.dayIndex > nowDayIndex) {
-      return false; // Subject is on a future day of the week
-    }
-
     const [hour, minute] = subject.time.split(':').map(Number);
 
-    // Create a date object for the subject's lecture this week
+    // Create a new Date object for the subject's lecture this week to avoid modifying the original 'currentTime'
     const subjectDate = new Date(currentTime);
+    subjectDate.setHours(0, 0, 0, 0); // Normalize to the beginning of the current day
+
+    // Calculate the difference in days and set the correct date for the lecture
+    const nowDayIndex = currentTime.getDay() === 0 ? 6 : currentTime.getDay() - 1;
     const dayDifference = subject.dayIndex - nowDayIndex;
     subjectDate.setDate(subjectDate.getDate() + dayDifference);
+
+    // Set the specific time for the lecture on that calculated date
     subjectDate.setHours(hour, minute, 0, 0);
 
     const subjectEnd = new Date(subjectDate.getTime() + durationMs);
-
     return currentTime > subjectEnd;
   }
 
@@ -360,14 +373,15 @@
 
     buttons.forEach(b => {
       const isCustom = b.type === 'custom';
+      const spanClass = isCustom ? 'span-2' : 'span-1';
       let labelText = b.label || '';
 
       if (isCustom && truncateCustomLabel && labelText.length > 5) {
         labelText = labelText.substring(0, 5) + '…';
       }
 
-      const iconCircleClass = isCustom ? 'icon-circle is-custom' : 'icon-circle';
-      const linkClass = isCustom ? 'embed-link is-custom' : 'embed-link';
+      const iconCircleClass = 'icon-circle' + (isCustom ? ' is-custom' : '');
+      const linkClass = 'embed-link ' + spanClass;
 
       const link = el('a', { className: linkClass, href: b.link || '#', target: '_blank', title: b.label }, [
         el('div', { className: iconCircleClass }, [
@@ -392,6 +406,61 @@
     }
     updateTime();
     setInterval(updateTime, 1000);
+  }
+
+  function scheduleNextUpdate() {
+    // Clear any existing timer to prevent duplicates
+    clearTimeout(state.nextUpdateTimeout);
+
+    const now = new Date();
+    const eventTimes = [];
+
+    // 1. Add next midnight
+    const tomorrow = new Date(now);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    tomorrow.setHours(0, 0, 1, 0); // 1 second past midnight to be safe
+    eventTimes.push(tomorrow);
+
+    // 2. Add start and end times for today's subjects
+    const todayDayIndex = now.getDay() === 0 ? 6 : now.getDay() - 1;
+    const [durHours, durMins] = state.lectureDuration.split(':').map(Number);
+    const durationMs = (durHours * 60 * 60 * 1000) + (durMins * 60 * 1000);
+
+    state.selected.forEach(subjId => {
+      const dayData = state.userDays[subjId];
+      const dayIndex = daysOfWeek.indexOf(dayData?.day);
+
+      if (dayIndex === todayDayIndex && dayData.time) {
+        const [startHour, startMinute] = dayData.time.split(':').map(Number);
+
+        // Create a date object for the start time today
+        const startTime = new Date(now);
+        startTime.setHours(startHour, startMinute, 0, 0);
+        eventTimes.push(startTime);
+
+        // Create a date object for the end time today
+        const endTime = new Date(startTime.getTime() + durationMs);
+        eventTimes.push(endTime);
+      }
+    });
+
+    // 3. Find the soonest future event
+    const futureEvents = eventTimes
+      .filter(t => t > now) // Only consider times in the future
+      .sort((a, b) => a - b); // Sort them chronologically
+
+    if (futureEvents.length > 0) {
+      const nextEventTime = futureEvents[0];
+      const timeUntilNextEvent = nextEventTime.getTime() - now.getTime();
+
+      console.log(`Next UI update scheduled for: ${nextEventTime.toLocaleTimeString()}`);
+
+      state.nextUpdateTimeout = setTimeout(() => {
+        console.log("Auto-updating UI due to scheduled event...");
+        renderHomePage(); // Re-render the home page
+        scheduleNextUpdate(); // Schedule the *next* update after this one
+      }, timeUntilNextEvent);
+    }
   }
 
   function initSummaryWidget() {
@@ -493,7 +562,7 @@
 
     // --- Pre-render Mobile Navigator and append it ---
     const mobileNavTemplate = `
-      <div class="weeks-mobile-nav" style="display: none;">
+      <div class="weeks-mobile-nav" style="display: none; box-shadow: 0 0 0 5px var(--bg-color);">
         <button class="nav-arrow" id="mobile-prev-week"><span class="material-symbols-outlined">arrow_back_ios</span></button>
         <div class="current-week-display"></div>
         <button class="nav-arrow" id="mobile-next-week"><span class="material-symbols-outlined">arrow_forward_ios</span></button>
@@ -616,10 +685,23 @@
         cardClasses.push('is-upcoming');
       }
 
-      const titleEl = el('h3', { className: 'widget-title', textContent: subj.name, classList: subj.icon ? 'has-icon' : '' });
+      const titleEl = el('h3', { className: 'subject-title', textContent: subj.name });
       if (subj.icon) {
-        titleEl.prepend(el('span', { className: 'material-symbols-outlined', textContent: subj.icon, style: 'color: var(--text-muted-color);' }));
+        titleEl.prepend(el('span', { className: 'material-symbols-outlined', textContent: subj.icon }));
       }
+
+      const dayCircle = el('div', { className: 'day-circle' });
+      if (subj.dayIndex !== -1) {
+        dayCircle.textContent = dayAbbreviations[subj.dayIndex];
+      } else {
+        dayCircle.append(el('span', { className: 'material-symbols-outlined', textContent: 'event_busy' }));
+        dayCircle.title = 'დღე არ არის მითითებული';
+      }
+
+      const headerEl = el('div', { className: 'subject-card-header' }, [
+        titleEl,
+        dayCircle
+      ]);
 
       const embedLinksContainer = createEmbedLinks(subj.weekButtons, true); // Truncate labels on home page
 
@@ -628,7 +710,11 @@
         const isChecked = state.quizCompletion[quizKey] === true;
         const isPastWeek = state.currentWeekData && state.selectedWeekNumber < state.currentWeekData.n;
 
-        const quizCheckButton = el('button', { className: 'quiz-check-btn', title: 'ქვიზი დაწერილია' });
+        const quizCheckButton = el('button', {
+          className: 'quiz-check-btn',
+          title: 'ქვიზი დაწერილია',
+          style: 'grid-column: 4 / 5; grid-row: 1 / 2; align-self: center; justify-self: center;' // Pin to the top-right
+        });
         if (isChecked) {
           quizCheckButton.classList.add('checked');
         } else if (isPastWeek) {
@@ -667,13 +753,16 @@
       }
 
       const card = el('div', { className: cardClasses.join(' ') }, [
-        titleEl,
+        headerEl,
         subtitleEl,
-        el('div', { className: 'topic', innerHTML: subj.weekTopic }),
+        el('div', { className: 'topic', innerHTML: subj.weekTopic, style: 'margin-bottom: 10px;' }),
         embedLinksContainer
       ]);
       grid.append(card);
     });
+
+    // After rendering, schedule the next automatic update
+    scheduleNextUpdate();
   }
 
   function renderResourcesPage() {
@@ -726,7 +815,7 @@
       }
       const card = el('div', { className: 'widget-card' }, [
         titleEl,
-        createEmbedLinks(subj.globalButtons)
+        createEmbedLinks(subj.globalButtons, false) // `false` to not truncate, CSS will handle it
       ]);
       grid.append(card);
     });
@@ -736,22 +825,42 @@
     const grid = $('#settings-grid');
     grid.innerHTML = '';
 
-    const mySubjectsColumn = el('div', { className: 'settings-column' });
+    const mySubjectsColumn = el('div', { className: 'settings-column' }); // This will now hold the carousel wrapper
     const catalogColumn = el('div', { className: 'settings-column' });
     const sideColumn = el('div', { className: 'settings-column' });
 
     const sortedSelected = state.selected.map(id => state.cache[id]).filter(Boolean).sort((a, b) => a.name.localeCompare(b.name));
+    const carouselWrapper = el('div', { className: 'subject-carousel-wrapper' });
     const carouselContent = el('div', { className: 'subject-carousel-content' });
 
     if (state.mySubjectCarouselIndex >= sortedSelected.length) {
       state.mySubjectCarouselIndex = Math.max(0, sortedSelected.length - 1);
     }
 
+    const prevBtn = el('button', { className: 'subject-carousel-nav-btn prev' }, [el('span', { className: 'material-symbols-outlined', textContent: 'arrow_back_ios_new' })]);
+    const nextBtn = el('button', { className: 'subject-carousel-nav-btn next' }, [el('span', { className: 'material-symbols-outlined', textContent: 'arrow_forward_ios' })]);
+
+    prevBtn.onclick = () => {
+      if (state.mySubjectCarouselIndex > 0) {
+        state.mySubjectCarouselIndex--;
+        renderSettingsPage();
+      }
+    };
+    nextBtn.onclick = () => {
+      if (state.mySubjectCarouselIndex < sortedSelected.length - 1) {
+        state.mySubjectCarouselIndex++;
+        renderSettingsPage();
+      }
+    };
+
+    prevBtn.disabled = state.mySubjectCarouselIndex === 0;
+    nextBtn.disabled = state.mySubjectCarouselIndex >= sortedSelected.length - 1;
+
     if (sortedSelected.length > 0) {
       const currentSubject = sortedSelected[state.mySubjectCarouselIndex];
-      carouselContent.append(createMySubjectWidget(currentSubject, sortedSelected));
+      carouselContent.append(createMySubjectWidget(currentSubject));
     } else {
-      carouselContent.append(el('p', { className: 'empty-placeholder padded', textContent: 'საგნები არ არის არჩეული.' }));
+      carouselContent.append(el('div', { className: 'widget-card my-subject-widget' }, [el('p', { className: 'empty-placeholder padded', textContent: 'საგნები არ არის არჩეული.' })]));
     }
 
     const searchInput = el('input', { id: 'catalog-search', type: 'search', placeholder: 'საგნის მოძებნა...' });
@@ -794,6 +903,11 @@
         const nameDiv = el('div', { className: 'name', textContent: subj.name });
         const itemContainer = el('div', { className: 'settings-item' }, [nameDiv]);
 
+        // Add subject icon to catalog item
+        if (subj.icon) {
+          nameDiv.prepend(el('span', { className: 'material-symbols-outlined', textContent: subj.icon, style: 'font-size: 1.2rem; margin-right: 8px; color: var(--text-muted-color);' }));
+        }
+
         if (isAdded) {
           button = el('button', { className: 'action-btn remove-from-catalog' }, [el('span', { className: 'material-symbols-outlined', textContent: 'close' })]);
           button.onclick = () => {
@@ -833,7 +947,8 @@
       catalogContent
     ]);
 
-    mySubjectsColumn.append(carouselContent);
+    carouselWrapper.append(prevBtn, carouselContent, nextBtn);
+    mySubjectsColumn.append(carouselWrapper);
     catalogColumn.append(catalogCard);
     sideColumn.append(createDurationWidget());
     sideColumn.append(createThemeWidget());
@@ -933,12 +1048,8 @@
           // We'll save the whole customSubjects object once.
         };
         state.cache[newId] = newSubject;
-        if (!state.selected.includes(newId)) {
-          state.selected.push(newId);
-        }
         state.selectedCustomSubjectId = newId;
-        saveCustomSubjects();
-        saveSettings(); // to save the `selected` array
+        saveNewSubject(newSubject); // Save immediately without using the Apply button logic
         renderEditorPage();
       }
     };
@@ -949,125 +1060,151 @@
       createBtn
     ]));
 
-    // --- MIDDLE COLUMN: Week Selector ---
-    const globalBtn = el('div', { className: 'editor-week-item global-btn', textContent: 'Global' });
-    if (state.selectedEditorWeek === 'global') {
-      globalBtn.classList.add('active');
-    }
-    globalBtn.onclick = () => {
-      state.selectedEditorWeek = 'global';
-      renderEditorPage();
-    };
-
-    const weekGrid = el('div', { className: 'editor-week-grid' });
-    SEMESTER_WEEKS.forEach(week => {
-      const item = el('div', { className: 'editor-week-item', textContent: week.n });
-      if (week.n === state.selectedEditorWeek) {
-        item.classList.add('active');
+    // Only show middle and right columns if there are custom subjects to edit.
+    if (customSubjects.length > 0) {
+      // --- MIDDLE COLUMN: Week Selector ---
+      const globalBtn = el('div', { className: 'editor-week-item global-btn', textContent: 'Global' });
+      if (state.selectedEditorWeek === 'global') {
+        globalBtn.classList.add('active');
       }
-      item.onclick = () => {
-        state.selectedEditorWeek = week.n;
+      globalBtn.onclick = () => {
+        state.selectedEditorWeek = 'global';
         renderEditorPage();
       };
-      weekGrid.append(item);
-    });
 
-    midCol.append(el('div', { className: 'editor-week-selector' }, [
-      el('button', {
-        id: 'editor-apply-btn',
-        className: `apply-btn ${state.editorIsDirty ? 'is-dirty' : ''}`,
-        textContent: 'Apply',
-        onclick: saveCustomSubjects }),
-      globalBtn,
-      weekGrid
-    ]));
-
-    // --- RIGHT COLUMN: Content Editor ---
-    const contentPanel = el('div', { className: 'editor-content-panel' });
-    const selectedSubject = state.cache[state.selectedCustomSubjectId];
-
-    if (selectedSubject) {
-      const isGlobal = state.selectedEditorWeek === 'global';
-      const weekData = isGlobal ? null : selectedSubject.weeks?.find(w => w.week === state.selectedEditorWeek);
-
-      // Subject Name Editor
-      const nameInput = el('input', { type: 'text', value: selectedSubject.name });
-      nameInput.oninput = () => {
-        selectedSubject.name = nameInput.value;
-        markEditorAsDirty();
-        // No need to re-render the whole page, just update the list item text
-        const activeItem = $('.my-subject-item.active');
-        if (activeItem) activeItem.textContent = nameInput.value;
-      };
-      contentPanel.append(el('div', { className: 'form-group' }, [el('label', { textContent: 'საგნის სახელი' }), nameInput]));
-
-      if (!isGlobal) {
-        // Topic Editor
-        const topicInput = el('textarea', { placeholder: 'შეიყვანეთ თემა...', value: weekData?.topic || '' });
-        topicInput.oninput = () => {
-          let currentWeek = selectedSubject.weeks.find(w => w.week === state.selectedEditorWeek);
-          if (!currentWeek) {
-            currentWeek = { week: state.selectedEditorWeek };
-            selectedSubject.weeks.push(currentWeek);
-          }
-          currentWeek.topic = topicInput.value;
-          markEditorAsDirty();
-        };
-        contentPanel.append(el('div', { className: 'form-group' }, [el('label', { textContent: `კვირა ${state.selectedEditorWeek} - თემა` }), topicInput]));
-
-        // Type Editor
-        const typeSelect = el('select');
-        const types = ['ლექცია', 'ლექცია (ქვიზი)', 'პრეზენტაცია', 'შუალედური'];
-        types.forEach(t => typeSelect.append(el('option', { value: t, textContent: t, selected: t === (weekData?.type || 'ლექცია') })));
-        typeSelect.onchange = () => {
-          let currentWeek = selectedSubject.weeks.find(w => w.week === state.selectedEditorWeek);
-          if (!currentWeek) {
-            currentWeek = { week: state.selectedEditorWeek };
-            selectedSubject.weeks.push(currentWeek);
-          }
-          currentWeek.type = typeSelect.value;
-          markEditorAsDirty();
-        };
-        contentPanel.append(el('div', { className: 'form-group' }, [el('label', { textContent: 'ტიპი' }), typeSelect]));
-      }
-
-      // --- Button Editor ---
-      let buttonsToEdit;
-      let title;
-
-      if (isGlobal) {
-        if (!selectedSubject.globalButtons) {
-          selectedSubject.globalButtons = [];
+      const weekGrid = el('div', { className: 'editor-week-grid' });
+      SEMESTER_WEEKS.forEach(week => {
+        const item = el('div', { className: 'editor-week-item', textContent: week.n });
+        if (week.n === state.selectedEditorWeek) {
+          item.classList.add('active');
         }
-        buttonsToEdit = selectedSubject.globalButtons;
-        title = "Global ღილაკები";
-      } else {
-        if (!weekData) {
-          // Ensure week data exists before trying to access buttons
-          selectedSubject.weeks.push({ week: state.selectedEditorWeek, buttons: [] });
-          buttonsToEdit = selectedSubject.weeks.find(w => w.week === state.selectedEditorWeek).buttons;
+        item.onclick = () => {
+          state.selectedEditorWeek = week.n;
+          renderEditorPage();
+        };
+        weekGrid.append(item);
+      });
+
+      midCol.append(el('div', { className: 'editor-week-selector' }, [
+        el('button', {
+          id: 'editor-apply-btn',
+          className: `apply-btn ${state.editorIsDirty ? 'is-dirty' : ''}`,
+          textContent: 'Apply',
+          onclick: saveCustomSubjects
+        }),
+        globalBtn,
+        weekGrid
+      ]));
+
+      // --- RIGHT COLUMN: Content Editor ---
+      const contentPanel = el('div', { className: 'editor-content-panel' });
+      const selectedSubject = state.cache[state.selectedCustomSubjectId];
+
+      if (selectedSubject) {
+        const isGlobal = state.selectedEditorWeek === 'global';
+        const weekData = isGlobal ? null : selectedSubject.weeks?.find(w => w.week === state.selectedEditorWeek);
+
+        // Subject Name Editor
+        const nameInput = el('input', { type: 'text', value: selectedSubject.name });
+        nameInput.oninput = () => {
+          selectedSubject.name = nameInput.value;
+          markEditorAsDirty();
+          // No need to re-render the whole page, just update the list item text
+          const activeItem = $('.my-subject-item.active .subject-name');
+          if (activeItem) activeItem.textContent = nameInput.value;
+        };
+        contentPanel.append(el('div', { className: 'form-group' }, [el('label', { textContent: 'საგნის სახელი' }), nameInput]));
+
+        // Subject Icon Editor
+        const iconInput = el('input', { type: 'text', value: selectedSubject.icon || '', placeholder: 'e.g., calculate' });
+        iconInput.oninput = () => {
+          selectedSubject.icon = iconInput.value.trim();
+          markEditorAsDirty();
+          // Update icon in the side list as well
+          const activeItem = $('.my-subject-item.active .subject-name');
+          if (activeItem) activeItem.querySelector('.material-symbols-outlined')?.remove(); // remove old one
+          if (selectedSubject.icon) activeItem.prepend(el('span', { className: 'material-symbols-outlined', textContent: selectedSubject.icon }));
+        };
+        const iconLabel = el('label');
+        iconLabel.append(document.createTextNode('საგნის სიმბოლო '));
+        iconLabel.append(el('a', {
+          href: 'https://fonts.google.com/icons',
+          target: '_blank',
+          textContent: '(google icons)',
+          style: 'text-decoration: underline; color: var(--text-muted-color); font-weight: normal; font-size: 0.9em; cursor: pointer;'
+        }));
+        contentPanel.append(el('div', { className: 'form-group' }, [iconLabel, iconInput]));
+        if (!isGlobal) {
+          // Topic Editor
+          const topicInput = el('textarea', { placeholder: 'შეიყვანეთ თემა...', value: weekData?.topic || '' });
+          topicInput.oninput = () => {
+            let currentWeek = selectedSubject.weeks.find(w => w.week === state.selectedEditorWeek);
+            if (!currentWeek) {
+              currentWeek = { week: state.selectedEditorWeek };
+              selectedSubject.weeks.push(currentWeek);
+            }
+            currentWeek.topic = topicInput.value;
+            markEditorAsDirty();
+          };
+          contentPanel.append(el('div', { className: 'form-group' }, [el('label', { textContent: `კვირა ${state.selectedEditorWeek} - თემა` }), topicInput]));
+
+          // Type Editor
+          const typeSelect = el('select');
+          const types = ['ლექცია', 'ლექცია (ქვიზი)', 'პრეზენტაცია', 'შუალედური'];
+          types.forEach(t => typeSelect.append(el('option', { value: t, textContent: t, selected: t === (weekData?.type || 'ლექცია') })));
+          typeSelect.onchange = () => {
+            let currentWeek = selectedSubject.weeks.find(w => w.week === state.selectedEditorWeek);
+            if (!currentWeek) {
+              currentWeek = { week: state.selectedEditorWeek };
+              selectedSubject.weeks.push(currentWeek);
+            }
+            currentWeek.type = typeSelect.value;
+            markEditorAsDirty();
+          };
+          contentPanel.append(el('div', { className: 'form-group' }, [el('label', { textContent: 'ტიპი' }), typeSelect]));
+        }
+
+        // --- Button Editor ---
+        let buttonsToEdit;
+        let title;
+
+        if (isGlobal) {
+          if (!selectedSubject.globalButtons) {
+            selectedSubject.globalButtons = [];
+          }
+          buttonsToEdit = selectedSubject.globalButtons;
+          title = "Global ღილაკები";
         } else {
-          if (!weekData.buttons) {
-            weekData.buttons = [];
+          if (!weekData) {
+            // Ensure week data exists before trying to access buttons
+            selectedSubject.weeks.push({ week: state.selectedEditorWeek, buttons: [] });
+            buttonsToEdit = selectedSubject.weeks.find(w => w.week === state.selectedEditorWeek).buttons;
+          } else {
+            if (!weekData.buttons) {
+              weekData.buttons = [];
+            }
+            buttonsToEdit = weekData.buttons;
           }
-          buttonsToEdit = weekData.buttons;
+          title = `კვირა ${state.selectedEditorWeek} - ღილაკები`;
         }
-        title = `კვირა ${state.selectedEditorWeek} - ღილაკები`;
+
+        const onButtonUpdate = () => {
+          markEditorAsDirty();
+          renderEditorPage(); // Re-render immediately to show UI changes (like disabled state)
+        };
+
+        contentPanel.append(createButtonEditor(title, buttonsToEdit, onButtonUpdate));
+
+      } else {
+        contentPanel.append(el('p', { className: 'empty-placeholder', textContent: 'აირჩიეთ საგანი რედაქტირებისთვის.' }));
       }
+      rightCol.append(contentPanel);
 
-      const onButtonUpdate = () => {
-        markEditorAsDirty();
-        renderEditorPage(); // Re-render immediately to show UI changes (like disabled state)
-      };
-
-      contentPanel.append(createButtonEditor(title, buttonsToEdit, onButtonUpdate));
-
+      grid.append(leftCol, midCol, rightCol);
     } else {
-      contentPanel.append(el('p', { className: 'empty-placeholder', textContent: 'აირჩიეთ საგანი რედაქტირებისთვის.' }));
+      // If no custom subjects, only show the left column.
+      grid.append(leftCol);
     }
-    rightCol.append(contentPanel);
-
-    grid.append(leftCol, midCol, rightCol);
   }
 
   function createButtonEditor(title, buttonsArray, onUpdate) {
@@ -1139,9 +1276,8 @@ disabled: button.type !== 'custom'
     return container;
   }
 
-  function createMySubjectWidget(subj, sortedSelected) {
+  function createMySubjectWidget(subj) {
     const lectureStartTimes = ["09:00", "11:20", "13:40", "16:00", "18:20"].sort();
-    const dayAbbreviations = ["ორშ", "სამ", "ოთხ", "ხუთ", "პარ", "შაბ"];
     const currentDay = state.userDays[subj.id]?.day;
 
     const timeSelect = el('select', { className: 'day-time-select' });
@@ -1199,28 +1335,18 @@ disabled: button.type !== 'custom'
       renderEditorPage(); // Re-render editor to reflect removal
     };
 
-    const prevBtn = el('button', { className: 'subject-carousel-nav-btn' }, [el('span', { className: 'material-symbols-outlined', textContent: 'arrow_back_ios_new' })]);
-    const nextBtn = el('button', { className: 'subject-carousel-nav-btn' }, [el('span', { className: 'material-symbols-outlined', textContent: 'arrow_forward_ios' })]);
-
-    prevBtn.onclick = () => {
-      state.mySubjectCarouselIndex = (state.mySubjectCarouselIndex - 1 + sortedSelected.length) % sortedSelected.length;
-      renderSettingsPage();
-    };
-    nextBtn.onclick = () => {
-      state.mySubjectCarouselIndex = (state.mySubjectCarouselIndex + 1) % sortedSelected.length;
-      renderSettingsPage();
-    };
-
-    const navContainer = el('div', { className: 'subject-carousel-nav-container' }, [prevBtn, nextBtn]);
+    const titleEl = el('h3', { className: 'widget-title', textContent: subj.name, classList: subj.icon ? 'has-icon' : '' });
+    if (subj.icon) {
+      titleEl.prepend(el('span', { className: 'material-symbols-outlined', textContent: subj.icon }));
+    }
 
     return el('div', { className: 'widget-card my-subject-widget' }, [
       el('div', { className: 'my-subject-widget-header' }, [
-        el('h3', { className: 'widget-title', textContent: subj.name }),
+        titleEl,
         removeBtn,
       ]),
       weekdayContainer,
-      timeSelect,
-      navContainer
+      timeSelect
     ]);
   }
 
@@ -1307,14 +1433,36 @@ disabled: button.type !== 'custom'
       item.addEventListener('click', () => {
         const viewId = item.dataset.view;
 
-        navItems.forEach(i => i.classList.remove('active'));
-        item.classList.add('active');
+        // Check if the clicked item is already active
+        if (item.classList.contains('active')) {
+          // If yes, just refresh the content of that view
+          console.log(`Refreshing view: ${viewId}`);
+          switch (viewId) {
+            case 'live-view':
+              renderHomePage();
+              initSummaryWidget(); // Also refresh summary
+              break;
+            case 'resources-view':
+              renderResourcesPage();
+              break;
+            case 'editor-view':
+              renderEditorPage();
+              break;
+            case 'settings-view':
+              renderSettingsPage();
+              break;
+          }
+        } else {
+          // If not, switch to the new view
+          navItems.forEach(i => i.classList.remove('active'));
+          item.classList.add('active');
 
-        views.forEach(v => v.classList.remove('active'));
-        $(`#${viewId}`).classList.add('active');
+          views.forEach(v => v.classList.remove('active'));
+          $(`#${viewId}`).classList.add('active');
 
-        pageTitle.textContent = item.dataset.title;
-        document.body.dataset.activeView = viewId;
+          pageTitle.textContent = item.dataset.title;
+          document.body.dataset.activeView = viewId;
+        }
       });
     });
   }
@@ -1333,6 +1481,7 @@ disabled: button.type !== 'custom'
     initLiveTime();
     initSummaryWidget();
     initNavigation();
+    scheduleNextUpdate(); // Initial call to schedule updates
   }
 
   function initAuth() {
