@@ -930,9 +930,9 @@ body[data-active-view="live-view"] #live-view {
   height: 22px;
   display: grid;
   place-items: center;
-  font-size: 0.7rem;
+  font-size: 0.8rem;
   font-weight: 700;
-  padding-top: 5px;
+  padding-top: 3px;
   line-height: 0;
   box-shadow: 0 0 0 5px var(--bg-color);
 }
@@ -950,7 +950,7 @@ body[data-active-view="live-view"] #live-view {
   place-items: center;
   font-size: 0.5rem; /* Larger for the checkmark */
   font-weight: 800;
-  padding-top: 1px;
+  padding-top: 2px;
   line-height: 0;
   box-shadow: 0 0 0 5px var(--bg-color);
   font-variation-settings: 'FILL' 1, 'wght' 700, 'GRAD' 0;
