@@ -860,6 +860,7 @@ function startAdmin(){
 
       const box = $("#globalBtns");
       (currentSubjectData.globalButtons || []).forEach(b => box.append(createButtonEditor(b, editorContainer, true)));
+      (draftSubjectData.globalButtons || []).forEach(b => box.append(createButtonEditor(b, editorContainer, true)));
       new Sortable(box, { animation: 150, handle: '.drag-handle', onEnd: markDirty });
 
       const checkEmbedLimit = () => {
@@ -911,10 +912,10 @@ function startAdmin(){
               const template = btn.dataset.template;
               
               for (let i = 1; i <= 13; i++) {
-                  let weekData = currentSubjectData.weeks.find(w => w.week === i);
+                  let weekData = draftSubjectData.weeks.find(w => w.week === i);
                   if (!weekData) {
                       weekData = { week: i, topic: "", buttons: [] };
-                      currentSubjectData.weeks.push(weekData);
+                      draftSubjectData.weeks.push(weekData);
                   }
 
                   if (template === "1") {
@@ -932,7 +933,7 @@ function startAdmin(){
               }
 
               // Sort weeks array just in case new weeks were added out of order
-              currentSubjectData.weeks.sort((a, b) => a.week - b.week);
+              draftSubjectData.weeks.sort((a, b) => a.week - b.week);
 
               markDirty();
               alert("Template applied! Don't forget to click 'Apply' to save the changes.");
