@@ -244,6 +244,7 @@
       Object.assign(state.cache, data.customSubjects);
       // Also add them to the `selected` array if they aren't already
       Object.keys(data.customSubjects).forEach(id => !state.selected.includes(id) && state.selected.push(id));
+      // We just load them into the cache. The `state.selected` array from the DB is the source of truth for what's on the home page.
     }
     state.quizCompletion = data.quizCompletion || {};
     state.lectureDuration = data.lectureDuration || "03:00";
@@ -830,8 +831,7 @@
     const sideColumn = el('div', { className: 'settings-column' });
 
     const sortedSelected = state.selected.map(id => state.cache[id]).filter(Boolean).sort((a, b) => a.name.localeCompare(b.name));
-    const carouselWrapper = el('div', { className: 'subject-carousel-wrapper' });
-    const carouselContent = el('div', { className: 'subject-carousel-content' });
+    const subjectWidgetContainer = el('div', { className: 'subject-widget-container' });
 
     if (state.mySubjectCarouselIndex >= sortedSelected.length) {
       state.mySubjectCarouselIndex = Math.max(0, sortedSelected.length - 1);
@@ -858,10 +858,17 @@
 
     if (sortedSelected.length > 0) {
       const currentSubject = sortedSelected[state.mySubjectCarouselIndex];
-      carouselContent.append(createMySubjectWidget(currentSubject));
+      subjectWidgetContainer.append(createMySubjectWidget(currentSubject));
     } else {
-      carouselContent.append(el('div', { className: 'widget-card my-subject-widget' }, [el('p', { className: 'empty-placeholder padded', textContent: 'საგნები არ არის არჩეული.' })]));
+      subjectWidgetContainer.append(el('div', { className: 'widget-card my-subject-widget' }, [el('p', { className: 'empty-placeholder padded', textContent: 'საგნები არ არის არჩეული.' })]));
     }
+
+    // Create the new navigation widget
+    const arrowsWidget = el('div', { className: 'widget-card subject-nav-widget' }, [
+      prevBtn,
+      el('div', { className: 'subject-counter', textContent: sortedSelected.length > 0 ? `${state.mySubjectCarouselIndex + 1} / ${sortedSelected.length}` : '0 / 0' }),
+      nextBtn
+    ]);
 
     const searchInput = el('input', { id: 'catalog-search', type: 'search', placeholder: 'საგნის მოძებნა...' });
     const searchContainer = el('div', { className: 'search-input-container' }, [
@@ -947,8 +954,8 @@
       catalogContent
     ]);
 
-    carouselWrapper.append(prevBtn, carouselContent, nextBtn);
-    mySubjectsColumn.append(carouselWrapper);
+    mySubjectsColumn.append(subjectWidgetContainer);
+    mySubjectsColumn.append(arrowsWidget);
     catalogColumn.append(catalogCard);
     sideColumn.append(createDurationWidget());
     sideColumn.append(createThemeWidget());
@@ -1048,6 +1055,7 @@
           // We'll save the whole customSubjects object once.
         };
         state.cache[newId] = newSubject;
+        // state.selected.push(newId); // Do not automatically add to selected subjects
         state.selectedCustomSubjectId = newId;
         saveNewSubject(newSubject); // Save immediately without using the Apply button logic
         renderEditorPage();
@@ -1313,40 +1321,45 @@ disabled: button.type !== 'custom'
       weekdayContainer.append(dayBtn);
     });
 
-    const removeBtn = el('button', { className: 'action-btn remove' }, [
-      el('span', { className: 'material-symbols-outlined', textContent: 'close' })
-    ]);
-    removeBtn.onclick = () => {
-      const subjectToRemove = state.cache[subj.id];
-
-      // Filter from selected list
-      state.selected = state.selected.filter(id => id !== subj.id);
-      delete state.userDays[subj.id];
-
-      // If it's a custom subject, remove it from cache and database
-      if (subjectToRemove?.isCustom) {
-        delete state.cache[subj.id];
-        // This will trigger a save that removes the subject from the DB
-        deleteCustomSubjectFromDB(subj.id);
-      }
-
-      autoSave();
-      renderSettingsPage();
-      renderEditorPage(); // Re-render editor to reflect removal
-    };
+    const footerContainer = el('div', { className: 'my-subject-widget-footer' });
 
     const titleEl = el('h3', { className: 'widget-title', textContent: subj.name, classList: subj.icon ? 'has-icon' : '' });
     if (subj.icon) {
       titleEl.prepend(el('span', { className: 'material-symbols-outlined', textContent: subj.icon }));
     }
 
+    const removeBtn = el('button', { className: 'action-btn remove' }, [
+      el('span', { className: 'material-symbols-outlined', textContent: 'close' })
+    ]);
+    removeBtn.onclick = () => {
+      if (confirm(`დარწმუნებული ხართ, რომ გსურთ საგნის "${subj.name}" წაშლა?`)) {
+        const subjectToRemove = state.cache[subj.id];
+
+        // Filter from selected list
+        state.selected = state.selected.filter(id => id !== subj.id);
+        delete state.userDays[subj.id];
+
+        // If it's a custom subject, remove it from cache and database
+        if (subjectToRemove?.isCustom) {
+          delete state.cache[subj.id];
+          // This will trigger a save that removes the subject from the DB
+          deleteCustomSubjectFromDB(subj.id);
+        }
+
+        autoSave();
+        renderSettingsPage();
+        renderEditorPage(); // Re-render editor to reflect removal
+      }
+    };
+
+    footerContainer.append(removeBtn, timeSelect);
+
     return el('div', { className: 'widget-card my-subject-widget' }, [
       el('div', { className: 'my-subject-widget-header' }, [
         titleEl,
-        removeBtn,
       ]),
       weekdayContainer,
-      timeSelect
+      footerContainer
     ]);
   }
 

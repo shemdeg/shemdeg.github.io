@@ -633,20 +633,13 @@ body[data-active-view="live-view"] #live-view {
   background-color: var(--accent-color);
   color: var(--bg-color);
 }
-.subject-carousel-content {
-  flex-grow: 1;
-  min-width: 0; /* Prevent flex item from overflowing */
+.subject-widget-container {
   animation: fadeIn 0.3s ease-in-out;
 }
-.subject-carousel-wrapper {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  width: 100%;
-}
+
 .subject-carousel-nav-btn {
-  background: color-mix(in srgb, var(--text-color) 5%, transparent);
-  border: none;
+  background: transparent;
+  border: 1px solid color-mix(in srgb, var(--text-color) 15%, transparent);
   color: var(--text-color);
   border-radius: 12px;
   width: 50px;
@@ -659,7 +652,7 @@ body[data-active-view="live-view"] #live-view {
 }
 
 .subject-carousel-nav-btn:hover {
-  background: color-mix(in srgb, var(--text-color) 10%, transparent);
+  background: color-mix(in srgb, var(--text-color) 5%, transparent);
 }
 
 .subject-carousel-nav-btn:disabled {
@@ -668,14 +661,27 @@ body[data-active-view="live-view"] #live-view {
   background: color-mix(in srgb, var(--text-color) 2%, transparent);
 }
 
+.subject-nav-widget {
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px;
+  min-height: auto; /* Make height based on content */
+}
+
+.subject-counter {
+  font-weight: 600;
+  color: var(--text-muted-color);
+}
+
 @media screen and (max-width: 1000px) {
-  .subject-carousel-wrapper {
-    gap: 8px;
-  }
   .subject-carousel-nav-btn {
     width: 44px;
     height: 44px;
+    flex-grow: 1;
+    max-width: 100px;
   }
+  /* No special sizing needed for mobile buttons in the nav widget anymore */
 }
 
 .settings-widget-content { flex-grow: 1; min-height: 0; overflow-y: auto; padding-right: 5px; }
@@ -1052,6 +1058,32 @@ body[data-active-view="live-view"] #weeks-bar-container {
 .my-subject-widget-header .widget-title {
   font-size: 1.1rem;
 }
+
+  .my-subject-widget-footer {
+    display: grid;
+    grid-template-columns: 1fr 2fr; /* 1 part for button, 2 parts for select */
+    gap: 10px;
+    align-items: center;
+  }
+
+  .my-subject-widget-footer .action-btn.remove {
+    height: 50px; /* Match the height of the select dropdown */
+    width: 100%; /* Fill the grid cell */
+  }
+
+  @media screen and (max-width: 1000px) {
+    .my-subject-widget .my-subject-widget-header .widget-title {
+      font-size: 1rem; /* Slightly smaller font size for subject name on mobile */
+    }
+    .my-subject-widget .weekday-chooser {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr); /* 3 columns */
+      gap: 8px;
+    }
+    .my-subject-widget .weekday-btn {
+      width: auto; /* Let the grid handle the width */
+    }
+  }
 
 #catalog-widget {
   flex: 1;
