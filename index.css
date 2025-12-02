@@ -47,15 +47,11 @@
   padding: 0;
 }
 
-/* Disable double-tap to zoom on interactive elements for a faster UI response */
-button, .nav-item, .week-button, .theme-option {
-  touch-action: manipulation;
-}
-
 html {
   color-scheme: dark;
   -webkit-text-size-adjust: 100%;
   -webkit-font-smoothing: antialiased;
+  touch-action: manipulation;
 }
 
 body {
