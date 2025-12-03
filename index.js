@@ -292,16 +292,15 @@
 
   function createEmbedLinks(buttons, truncateCustomLabel = false) {
     const container = el('div', { className: 'embed-links' });
-    if (!buttons || buttons.length === 0) return container;
+    if (!buttons || buttons.length === 0) {
+      container.style.display = 'none'; // Hide container if no buttons
+      return container;
+    }
 
     buttons.forEach(b => {
       const isCustom = b.type === 'custom';
       const spanClass = isCustom ? 'span-2' : 'span-1';
       let labelText = b.label || '';
-
-      if (isCustom && truncateCustomLabel && labelText.length > 5) {
-        labelText = labelText.substring(0, 5) + '…';
-      }
 
       const iconCircleClass = 'icon-circle' + (isCustom ? ' is-custom' : '');
       const linkClass = 'embed-link ' + spanClass;
@@ -881,6 +880,29 @@
 
     mySubjectsColumn.append(subjectWidgetContainer);
     mySubjectsColumn.append(arrowsWidget);
+
+    // Function to delete a custom subject from the database
+    const deleteCustomSubjectFromDB = async (subjectId) => {
+        if (state.user) {
+            const userRef = state.db.collection("users").doc(state.user.uid);
+            await userRef.update({
+                [`customSubjects.${subjectId}`]: firebase.firestore.FieldValue.delete()
+            });
+        }
+    };
+    // -- Manage Subjects Widget -- (Styled like logout button)
+    const manageButton = el('a', {
+        href: 'manage.html',
+        textContent: 'საგნების მართვა',
+        className: 'logout-button', // Re-use logout button style
+        style: 'text-decoration: none; display: block; text-align: center; background-color: var(--accent-color); color: var(--text-on-accent-color);'
+    });
+    const manageWidget = el('div', {
+        className: 'widget-card',
+        style: 'padding: 10px;' // Use widget color, just adjust padding
+    }, [manageButton]);
+    mySubjectsColumn.append(manageWidget);
+
     catalogColumn.append(catalogCard);
     sideColumn.append(createDurationWidget());
     sideColumn.append(createThemeWidget());
