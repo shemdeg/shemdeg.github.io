@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>ADMIN</title>
+<title>Admin - shemdeg</title>
 <link rel="icon" href="/icons/shicon.png">
 
 <!-- SEO META -->
@@ -22,9 +22,9 @@
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Georgian:wght@100..900&display=swap');
 
 :root{
-  --bg:#000000; --surface:#202020; --surface2:#161616; --text:#EDEFF2;
-  --accent:#16b438; --success:#38d98a; --danger:#f12525;
-  --buttontext:#ffffff;--field:#313131;
+  --bg:#121212; --surface:#202020; --surface2:#161616; --text:#EDEFF2;
+  --accent:#6e6e6e; --success:#ffffff; --danger:#f12525;
+  --buttontext:#ffffff;--field:#ffffff09;
 }
 
 /* Scrollbar */
@@ -859,8 +859,7 @@ function startAdmin(){
       setupImageUpload(editorContainer); // This needs to be adapted to use draftSubjectData
 
       const box = $("#globalBtns");
-      (currentSubjectData.globalButtons || []).forEach(b => box.append(createButtonEditor(b, editorContainer, true)));
-      (draftSubjectData.globalButtons || []).forEach(b => box.append(createButtonEditor(b, editorContainer, true)));
+      (draftSubjectData.globalButtons || []).forEach(b => box.append(createButtonEditor(b, editorContainer, true))); // Use only the draft data
       new Sortable(box, { animation: 150, handle: '.drag-handle', onEnd: markDirty });
 
       const checkEmbedLimit = () => {
@@ -912,10 +911,10 @@ function startAdmin(){
               const template = btn.dataset.template;
               
               for (let i = 1; i <= 13; i++) {
-                  let weekData = draftSubjectData.weeks.find(w => w.week === i);
+                  let weekData = draftSubjectData.weeks.find(w => w.week === i); // Use draft data
                   if (!weekData) {
                       weekData = { week: i, topic: "", buttons: [] };
-                      draftSubjectData.weeks.push(weekData);
+                      draftSubjectData.weeks.push(weekData); // Add to draft data
                   }
 
                   if (template === "1") {

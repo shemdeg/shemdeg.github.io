@@ -49,10 +49,6 @@
     selectedWeekNumber: null,
     db: null,
     auth: null,
-    saveTimeout: null,
-    editorIsDirty: false,
-    selectedCustomSubjectId: null,
-    selectedEditorWeek: 1,
     nextUpdateTimeout: null,
   };
 
@@ -139,80 +135,6 @@
     renderHomePage();
     renderResourcesPage();
     console.log("Settings auto-saved.");
-  }
-
-  function markEditorAsDirty() {
-    if (state.editorIsDirty) return; // Already dirty, no need to do anything
-    state.editorIsDirty = true;
-    const applyBtn = $('#editor-apply-btn');
-    if (applyBtn) {
-      applyBtn.classList.add('is-dirty');
-    }
-  }
-
-  async function saveCustomSubjects() {
-    const applyBtn = $('#editor-apply-btn');
-    if (!applyBtn || !state.selectedCustomSubjectId) return;
-
-    // 1. Set to "Saving" state
-    applyBtn.textContent = 'Saving...';
-    applyBtn.classList.add('saving');
-    applyBtn.classList.remove('saved', 'is-dirty');
-    applyBtn.disabled = true;
-
-    try {
-        const subjectToSave = state.cache[state.selectedCustomSubjectId];
-        if (state.user && subjectToSave) {
-            // Save only the currently selected custom subject
-            const path = `customSubjects.${subjectToSave.id}`;
-            await state.db.collection("users").doc(state.user.uid).update({
-                [path]: subjectToSave
-            });
-        }
-
-        // 2. Set to "Saved" state
-        state.editorIsDirty = false;
-        applyBtn.textContent = 'Saved!';
-        applyBtn.classList.remove('saving');
-        applyBtn.classList.add('saved');
-
-        // 3. Revert to default after 3 seconds
-        setTimeout(() => {
-            applyBtn.textContent = 'Apply';
-            applyBtn.classList.remove('saved');
-            applyBtn.disabled = false;
-        }, 3000);
-
-    } catch (error) {
-        console.error("Failed to save custom subjects:", error);
-        applyBtn.textContent = 'Error!';
-        applyBtn.style.backgroundColor = '#B00020'; // Red for error
-        applyBtn.disabled = false;
-        state.editorIsDirty = true; // Remain dirty on error
-    }
-  }
-
-  async function saveNewSubject(subject) {
-    if (state.user && subject) {
-      try {
-        const path = `customSubjects.${subject.id}`;
-        await state.db.collection("users").doc(state.user.uid).update({
-          [path]: subject
-        });
-        console.log("New subject saved:", subject.name);
-      } catch (error) { console.error("Error saving new subject:", error); }
-    }
-  }
-
-  async function deleteCustomSubjectFromDB(subjectId) {
-    if (state.user && subjectId) {
-      try {
-        const path = `customSubjects.${subjectId}`;
-        await state.db.collection("users").doc(state.user.uid).update({
-          [path]: firebase.firestore.FieldValue.delete()
-        });
-      } catch (error) { console.error("Error deleting subject from DB:", error); }
-    }
   }
 
   async function loadData() {
@@ -774,12 +696,16 @@
 
     const subjectsWithGlobalButtons = state.selected.map(id => {
       const subj = state.cache[id];
-      if (!subj || !subj.globalButtons || subj.globalButtons.length === 0) return null;
+      const filteredGlobalButtons = subj?.globalButtons?.filter(b => b.link) || [];
+      if (!subj || filteredGlobalButtons.length === 0) return null;
 
       const dayData = state.userDays?.[id] ?? { day: null, time: null };
 
       return {
-        ...subj,
+        // Create a new, clean object instead of spreading the original `subj`
+        name: subj.name,
+        icon: subj.icon,
+        globalButtons: filteredGlobalButtons, // Use the filtered array
         dayIndex: daysOfWeek.indexOf(dayData.day),
         time: dayData.time,
         isScheduled: dayData.day !== null
@@ -924,7 +850,6 @@
 
             autoSave();
             renderSettingsPage();
-            renderEditorPage();
           };
         } else {
           button = el('button', { className: 'action-btn' }, [el('span', { className: 'material-symbols-outlined', textContent: 'add' })]);
@@ -962,326 +887,6 @@
     sideColumn.append(createLogoutWidget());
 
     grid.append(mySubjectsColumn, catalogColumn, sideColumn);
-  }
-
-  function renderEditorPage() {
-    const grid = $('#editor-grid');
-    grid.innerHTML = '';
-
-    const leftCol = el('div', { className: 'editor-column' });
-    const midCol = el('div', { className: 'editor-column' });
-    const rightCol = el('div', { className: 'editor-column' });
-
-    // --- LEFT COLUMN: My Subjects Catalog ---
-    const mySubjectsList = el('div', { className: 'my-subjects-list' });
-    const customSubjects = Object.values(state.cache).filter(s => s.isCustom).sort((a, b) => a.name.localeCompare(b.name));
-
-    if (customSubjects.length > 0) {
-      if (!state.selectedCustomSubjectId || !state.cache[state.selectedCustomSubjectId]?.isCustom) {
-        state.selectedCustomSubjectId = customSubjects[0].id;
-        // --- Set editor to current week on initial load ---
-        if (state.currentWeekData) {
-          state.selectedEditorWeek = state.currentWeekData.n;
-        } else {
-          state.selectedEditorWeek = 1;
-        }
-      }
-      customSubjects.forEach(subj => {
-        const nameEl = el('div', { className: 'subject-name', textContent: subj.name });
-        nameEl.onclick = () => {
-          if (state.editorIsDirty) {
-            if (!confirm("You have unsaved changes. Are you sure you want to switch subjects? Your changes will be lost.")) {
-              return;
-            }
-          }
-          state.editorIsDirty = false; // Reset dirty state when switching
-          state.selectedCustomSubjectId = subj.id;
-          // --- Set editor to current week when subject is chosen ---
-          if (state.currentWeekData) {
-            state.selectedEditorWeek = state.currentWeekData.n;
-          } else {
-            state.selectedEditorWeek = 1;
-          }
-          renderEditorPage();
-        };
-
-        const deleteBtn = el('button', { className: 'editor-delete-subject-btn' }, [
-          el('span', { className: 'material-symbols-outlined', textContent: 'delete' })
-        ]);
-
-        deleteBtn.onclick = (e) => {
-          e.stopPropagation(); // Prevent the item's click event from firing
-          if (confirm(`დარწმუნებული ხართ, რომ გსურთ საგნის "${subj.name}" წაშლა? ეს მოქმედება შეუქცევადია.`)) {
-            // Remove from selected list
-            state.selected = state.selected.filter(id => id !== subj.id);
-            // Remove from day/time settings
-            delete state.userDays[subj.id];
-            // Remove from local cache
-            delete state.cache[subj.id];
-
-            // Trigger saves
-            deleteCustomSubjectFromDB(subj.id);
-            autoSave(); // Saves the updated 'selected' and 'userDays' arrays
-
-            // Re-render relevant pages
-            renderEditorPage();
-            renderSettingsPage();
-          }
-        };
-
-        const item = el('div', { className: 'my-subject-item' }, [nameEl, deleteBtn]);
-        if (subj.id === state.selectedCustomSubjectId) {
-          item.classList.add('active');
-        }
-        mySubjectsList.append(item);
-      });
-    } else {
-      mySubjectsList.append(el('p', { className: 'empty-placeholder padded', textContent: 'საკუთარი საგანი არ გაქვთ შექმნილი.' }));
-    }
-
-    const createBtn = el('button', { className: 'create-subject-btn', textContent: 'ახალი საგნის შექმნა' });
-    createBtn.onclick = () => {
-      const newName = prompt("შეიყვანეთ ახალი საგნის სახელი:");
-      if (newName && newName.trim() !== "") {
-        const newId = `custom_${Date.now()}`;
-        const newSubject = {
-          id: newId,
-          name: newName.trim(),
-          isCustom: true,
-          weeks: [],
-          globalButtons: [],
-          // Add a temporary flag to indicate it's new and needs a full save
-          // This is a bit of a workaround for how Firestore updates work.
-          // We'll save the whole customSubjects object once.
-        };
-        state.cache[newId] = newSubject;
-        // state.selected.push(newId); // Do not automatically add to selected subjects
-        state.selectedCustomSubjectId = newId;
-        saveNewSubject(newSubject); // Save immediately without using the Apply button logic
-        renderEditorPage();
-      }
-    };
-
-    leftCol.append(el('div', { className: 'my-subjects-catalog' }, [
-      el('h3', { className: 'widget-title' }, [document.createTextNode('ჩემი საგნების კატალოგი')]),
-      mySubjectsList,
-      createBtn
-    ]));
-
-    // Only show middle and right columns if there are custom subjects to edit.
-    if (customSubjects.length > 0) {
-      // --- MIDDLE COLUMN: Week Selector ---
-      const globalBtn = el('div', { className: 'editor-week-item global-btn', textContent: 'Global' });
-      if (state.selectedEditorWeek === 'global') {
-        globalBtn.classList.add('active');
-      }
-      globalBtn.onclick = () => {
-        state.selectedEditorWeek = 'global';
-        renderEditorPage();
-      };
-
-      const weekGrid = el('div', { className: 'editor-week-grid' });
-      SEMESTER_WEEKS.forEach(week => {
-        const item = el('div', { className: 'editor-week-item', textContent: week.n });
-        if (week.n === state.selectedEditorWeek) {
-          item.classList.add('active');
-        }
-        item.onclick = () => {
-          state.selectedEditorWeek = week.n;
-          renderEditorPage();
-        };
-        weekGrid.append(item);
-      });
-
-      midCol.append(el('div', { className: 'editor-week-selector' }, [
-        el('button', {
-          id: 'editor-apply-btn',
-          className: `apply-btn ${state.editorIsDirty ? 'is-dirty' : ''}`,
-          textContent: 'Apply',
-          onclick: saveCustomSubjects
-        }),
-        globalBtn,
-        weekGrid
-      ]));
-
-      // --- RIGHT COLUMN: Content Editor ---
-      const contentPanel = el('div', { className: 'editor-content-panel' });
-      const selectedSubject = state.cache[state.selectedCustomSubjectId];
-
-      if (selectedSubject) {
-        const isGlobal = state.selectedEditorWeek === 'global';
-        const weekData = isGlobal ? null : selectedSubject.weeks?.find(w => w.week === state.selectedEditorWeek);
-
-        // Subject Name Editor
-        const nameInput = el('input', { type: 'text', value: selectedSubject.name });
-        nameInput.oninput = () => {
-          selectedSubject.name = nameInput.value;
-          markEditorAsDirty();
-          // No need to re-render the whole page, just update the list item text
-          const activeItem = $('.my-subject-item.active .subject-name');
-          if (activeItem) activeItem.textContent = nameInput.value;
-        };
-        contentPanel.append(el('div', { className: 'form-group' }, [el('label', { textContent: 'საგნის სახელი' }), nameInput]));
-
-        // Subject Icon Editor
-        const iconInput = el('input', { type: 'text', value: selectedSubject.icon || '', placeholder: 'e.g., calculate' });
-        iconInput.oninput = () => {
-          selectedSubject.icon = iconInput.value.trim();
-          markEditorAsDirty();
-          // Update icon in the side list as well
-          const activeItem = $('.my-subject-item.active .subject-name');
-          if (activeItem) activeItem.querySelector('.material-symbols-outlined')?.remove(); // remove old one
-          if (selectedSubject.icon) activeItem.prepend(el('span', { className: 'material-symbols-outlined', textContent: selectedSubject.icon }));
-        };
-        const iconLabel = el('label');
-        iconLabel.append(document.createTextNode('საგნის სიმბოლო '));
-        iconLabel.append(el('a', {
-          href: 'https://fonts.google.com/icons',
-          target: '_blank',
-          textContent: '(google icons)',
-          style: 'text-decoration: underline; color: var(--text-muted-color); font-weight: normal; font-size: 0.9em; cursor: pointer;'
-        }));
-        contentPanel.append(el('div', { className: 'form-group' }, [iconLabel, iconInput]));
-        if (!isGlobal) {
-          // Topic Editor
-          const topicInput = el('textarea', { placeholder: 'შეიყვანეთ თემა...', value: weekData?.topic || '' });
-          topicInput.oninput = () => {
-            let currentWeek = selectedSubject.weeks.find(w => w.week === state.selectedEditorWeek);
-            if (!currentWeek) {
-              currentWeek = { week: state.selectedEditorWeek };
-              selectedSubject.weeks.push(currentWeek);
-            }
-            currentWeek.topic = topicInput.value;
-            markEditorAsDirty();
-          };
-          contentPanel.append(el('div', { className: 'form-group' }, [el('label', { textContent: `კვირა ${state.selectedEditorWeek} - თემა` }), topicInput]));
-
-          // Type Editor
-          const typeSelect = el('select');
-          const types = ['ლექცია', 'ლექცია (ქვიზი)', 'პრეზენტაცია', 'შუალედური'];
-          types.forEach(t => typeSelect.append(el('option', { value: t, textContent: t, selected: t === (weekData?.type || 'ლექცია') })));
-          typeSelect.onchange = () => {
-            let currentWeek = selectedSubject.weeks.find(w => w.week === state.selectedEditorWeek);
-            if (!currentWeek) {
-              currentWeek = { week: state.selectedEditorWeek };
-              selectedSubject.weeks.push(currentWeek);
-            }
-            currentWeek.type = typeSelect.value;
-            markEditorAsDirty();
-          };
-          contentPanel.append(el('div', { className: 'form-group' }, [el('label', { textContent: 'ტიპი' }), typeSelect]));
-        }
-
-        // --- Button Editor ---
-        let buttonsToEdit;
-        let title;
-
-        if (isGlobal) {
-          if (!selectedSubject.globalButtons) {
-            selectedSubject.globalButtons = [];
-          }
-          buttonsToEdit = selectedSubject.globalButtons;
-          title = "Global ღილაკები";
-        } else {
-          if (!weekData) {
-            // Ensure week data exists before trying to access buttons
-            selectedSubject.weeks.push({ week: state.selectedEditorWeek, buttons: [] });
-            buttonsToEdit = selectedSubject.weeks.find(w => w.week === state.selectedEditorWeek).buttons;
-          } else {
-            if (!weekData.buttons) {
-              weekData.buttons = [];
-            }
-            buttonsToEdit = weekData.buttons;
-          }
-          title = `კვირა ${state.selectedEditorWeek} - ღილაკები`;
-        }
-
-        const onButtonUpdate = () => {
-          markEditorAsDirty();
-          renderEditorPage(); // Re-render immediately to show UI changes (like disabled state)
-        };
-
-        contentPanel.append(createButtonEditor(title, buttonsToEdit, onButtonUpdate));
-
-      } else {
-        contentPanel.append(el('p', { className: 'empty-placeholder', textContent: 'აირჩიეთ საგანი რედაქტირებისთვის.' }));
-      }
-      rightCol.append(contentPanel);
-
-      grid.append(leftCol, midCol, rightCol);
-    } else {
-      // If no custom subjects, only show the left column.
-      grid.append(leftCol);
-    }
-  }
-
-  function createButtonEditor(title, buttonsArray, onUpdate) {
-    const container = el('div', { className: 'button-editor-container' });
-    const list = el('div', { className: 'button-editor-list' });
-
-    const renderItems = () => {
-      list.innerHTML = '';
-      buttonsArray.forEach((button, index) => {
-disabled: button.type !== 'custom'
-        const labelInput = el('input', {
-          type: 'text',
-          placeholder: 'Label',
-          value: button.label || '',
-          disabled: button.type !== 'custom' // Disable if not custom
-        });
-        const linkInput = el('input', { type: 'text', placeholder: 'Link URL', value: button.link || '' });
-        const typeSelect = el('select');
-        const types = ['slide', 'video', 'book', 'custom'];
-        types.forEach(t => typeSelect.append(el('option', { value: t, textContent: t, selected: t === button.type })));
-
-        const debouncedSave = () => {
-          clearTimeout(button.saveTimeout);
-          button.saveTimeout = setTimeout(onUpdate, 500);
-        };
-
-        labelInput.oninput = () => {
-          if (button.type === 'custom') { // Only allow editing if type is custom
-            button.label = labelInput.value;
-            debouncedSave();
-          }
-        };
-        linkInput.oninput = () => { button.link = linkInput.value; debouncedSave(); };
-        typeSelect.onchange = () => { button.type = typeSelect.value; onUpdate(); };
-
-        const deleteBtn = el('button', { className: 'delete-btn' }, [
-          el('span', { className: 'material-symbols-outlined', textContent: 'delete' })
-        ]);
-        deleteBtn.onclick = () => {
-          if (confirm(`დარწმუნებული ხართ რომ გსურთ წაშალოთ "${button.label || 'ეს ღილაკი'}"?`)) {
-            buttonsArray.splice(index, 1);
-            onUpdate();
-          }
-        };
-
-        const item = el('div', { className: 'button-editor-item' }, [
-          labelInput,
-          linkInput,
-          typeSelect,
-          deleteBtn
-        ]);
-        list.append(item);
-      });
-    };
-
-    const addBtn = el('button', { className: 'add-btn', textContent: 'ახალი ლინკის დამატება' });
-    addBtn.onclick = () => {
-      buttonsArray.push({ label: 'New Link', link: '', type: 'custom' });
-      onUpdate();
-    };
-
-    container.append(
-      el('h4', { className: 'widget-title', textContent: title }),
-      list,
-      addBtn
-    );
-
-    renderItems();
-    return container;
   }
 
   function createMySubjectWidget(subj) {
@@ -1348,7 +953,6 @@ disabled: button.type !== 'custom'
 
         autoSave();
         renderSettingsPage();
-        renderEditorPage(); // Re-render editor to reflect removal
       }
     };
 
@@ -1458,9 +1062,6 @@ disabled: button.type !== 'custom'
             case 'resources-view':
               renderResourcesPage();
               break;
-            case 'editor-view':
-              renderEditorPage();
-              break;
             case 'settings-view':
               renderSettingsPage();
               break;
@@ -1489,7 +1090,6 @@ disabled: button.type !== 'custom'
     renderHomePage();
     renderResourcesPage();
     renderSettingsPage();
-    renderEditorPage();
 
     initLiveTime();
     initSummaryWidget();
