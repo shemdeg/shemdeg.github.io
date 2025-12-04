@@ -383,10 +383,6 @@ body[data-active-view="live-view"] #live-view {
   /* The pulsing animation has been removed. The fade-in is inherited from .subject-card */
 }
 
-.subject-card {
-  /* animation: widget-fade-in 0.4s ease-out both; */
-}
-
 .subject-card .topic {
   font-size: 1rem;
   line-height: 1.5;
@@ -653,9 +649,6 @@ body[data-active-view="live-view"] #live-view {
 .weekday-btn.active {
   background-color: var(--accent-color);
   color: var(--text-on-accent-color);
-}
-.subject-widget-container {
-  /* animation: fadeIn 0.3s ease-in-out; */
 }
 
 .subject-carousel-nav-btn {
