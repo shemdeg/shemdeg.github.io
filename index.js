@@ -76,7 +76,7 @@
 
   const THEMES = {
     "Default": { bg: "#121212", widget: "#1E1E1E", text: "#fff", accent: "#fff", accentVariant: "#fff", textOnAccent: "#000000" },    
-    "Earth": { bg: "#121212", widget: "#1E1E1E", text: "#fff", accent: "#ff3a17ff", accentVariant: "#ff4c2dff", textOnAccent: "#FFFFFF" },
+    "Earth": { bg: "#121212", widget: "#1E1E1E", text: "#fff", accent: "#ff5100ff", accentVariant: "#ff4c2dff", textOnAccent: "#FFFFFF" },
     "SciFi": { bg: "#0A0F1E", widget: "#1A243D", text: "#E0E8FF", accent: "#00D1FF", accentVariant: "#007B9A", textOnAccent: "#000000" },
     "Green": { bg: "#121212", widget: "#1E1E1E", text: "#fff", accent: "#28b92dff", accentVariant: "rgba(79, 194, 84, 1)ff", textOnAccent: "#ffffffff" },
     "Blue": { bg: "#121212", widget: "#1E1E1E", text: "#fff", accent: "#2196F3", accentVariant: "#42A5F5", textOnAccent: "#FFFFFF" },
