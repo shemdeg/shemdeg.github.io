@@ -384,7 +384,7 @@ body[data-active-view="live-view"] #live-view {
 }
 
 .subject-card {
-  animation: widget-fade-in 0.4s ease-out both;
+  /* animation: widget-fade-in 0.4s ease-out both; */
 }
 
 .subject-card .topic {
@@ -392,7 +392,7 @@ body[data-active-view="live-view"] #live-view {
   line-height: 1.5;
   color: var(--text-muted-color);    
   white-space: nowrap; /* Keep text on a single line */
-  animation: fadeIn 0.3s ease-in-out; /* Add animation on week change */
+  /* animation: fadeIn 0.3s ease-in-out; */ /* Add animation on week change */
   text-overflow: ellipsis; /* Add ... for overflow */
   overflow: hidden;
 }
@@ -655,7 +655,7 @@ body[data-active-view="live-view"] #live-view {
   color: var(--text-on-accent-color);
 }
 .subject-widget-container {
-  animation: fadeIn 0.3s ease-in-out;
+  /* animation: fadeIn 0.3s ease-in-out; */
 }
 
 .subject-carousel-nav-btn {
