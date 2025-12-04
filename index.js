@@ -204,7 +204,9 @@
   function initCurrentWeek() {
     const iso = todayISO();
     state.currentWeekData = state.weekDates.find(w => isBetween(iso, w.start, w.end)) || state.weekDates[0];
-    state.selectedWeekNumber = state.currentWeekData ? state.currentWeekData.n : (state.weekDates.length > 0 ? state.weekDates[0].n : 1);
+    if (!state.selectedWeekNumber) {
+      state.selectedWeekNumber = state.currentWeekData ? state.currentWeekData.n : (state.weekDates.length > 0 ? state.weekDates[0].n : 1);
+    }
   }
 
   function isSubjectEnded(subject, currentTime, durationMs) {
@@ -881,16 +883,16 @@
 
             autoSave();
             renderSettingsPage();
+            renderHomePage();
           };
         } else {
           button = el('button', { className: 'action-btn' }, [el('span', { className: 'material-symbols-outlined', textContent: 'add' })]);
           button.onclick = () => {
             state.selected.push(subj.id);
             state.userDays[subj.id] = { day: daysOfWeek[0], time: "09:00" };
-            // No autoSave() here, let the user configure day/time first.
-            // The save will happen when they change day/time or click save in settings.
-            // We need to re-render to show the new item in the "My Subjects" carousel.
+            autoSave();
             renderSettingsPage();
+            renderHomePage();
           };
         }
 
