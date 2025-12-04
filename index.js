@@ -323,7 +323,7 @@
       const link = el('a', { className: linkClass, href: b.link || '#', target: '_blank', title: b.label }, [
         el('div', { className: iconCircleClass }, [
           el('span', { className: 'material-symbols-outlined', textContent: getEmbedIcon(b.type) }),
-          ...(isCustom ? [el('span', { className: 'label', textContent: labelText, style: 'white-space: nowrap;' })] : [])])]);
+          ...(isCustom ? [el('span', { className: 'label', textContent: labelText })] : [])])]);
       container.append(link);
     });
     return container;
@@ -1100,6 +1100,7 @@
     const pageTitle = $('#page-title');
 
     document.body.dataset.activeView = 'live-view';
+    applyBodyPadding(document.body.dataset.activeView); // Apply initial padding on load
 
     navItems.forEach(item => {
       item.addEventListener('click', () => {
@@ -1131,9 +1132,33 @@
 
           pageTitle.textContent = item.dataset.title;
           document.body.dataset.activeView = viewId;
+          applyBodyPadding(viewId); // Apply padding after view change
+
+          // Scroll to the top of the page for a clean transition
+          window.scrollTo({ top: 0, behavior: 'smooth' });
         }
       });
     });
+
+    // Add a resize listener to adjust padding if the user resizes the window
+    // or rotates their device.
+    window.addEventListener('resize', () => {
+      applyBodyPadding(document.body.dataset.activeView);
+    });
+  }
+
+  // New function to apply body padding based on view and screen size
+  function applyBodyPadding(activeViewId) {
+    const mobileBreakpoint = 700; // Matches the CSS media query
+    const isMobile = window.innerWidth <= mobileBreakpoint;
+
+    if (isMobile && (activeViewId === 'resources-view' || activeViewId === 'settings-view')) {
+      document.body.style.padding = '15px 15px 120px 15px';
+    } else if (isMobile) {
+      document.body.style.padding = '100px 15px 120px 15px'; // Default mobile padding from index.css
+    } else {
+      document.body.style.padding = '20px 20px 100px 20px'; // Default desktop padding from index.css
+    }
   }
 
   function bootAfterDataLoad() {
