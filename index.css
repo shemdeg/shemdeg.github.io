@@ -26,7 +26,21 @@
     font-style: normal;
 }
 
+::-webkit-scrollbar {
+  width: 20px;
+}
 
+::-webkit-scrollbar-track {
+    border: solid 3px transparent;
+    margin-top: 10px;
+    margin-bottom: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+    box-shadow: inset 0 0 10px 20px var(--accent);
+    border: solid 6px transparent;
+    border-radius: 20px;
+}
 
 :root {
   --bg-color: #121212;
@@ -165,13 +179,46 @@ body[data-active-view="live-view"] #live-view {
 
 /* === VIEW-SPECIFIC GRID STYLES === */
 #home-grid {
-  grid-template-columns: repeat(5, 1fr);
-  grid-auto-rows: 1fr; /* Make rows equal to column width for square cells */
+  grid-template-columns: repeat(5, 1fr); /* 5 equal columns */
+  grid-auto-rows: minmax(0, 1fr); /* Allow rows to grow and shrink */
   height: 100%;
 }
 
 #resources-grid {
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  align-content: start;
+}
+
+#settings-grid {
+  grid-template-columns: 1fr 1fr; /* Default to 2 equal columns */
+  align-items: start; /* Align columns to the top, preventing vertical stretching */
+}
+@media screen and (max-width: 1200px) {
+  #settings-grid { grid-template-columns: 1fr; } /* 1 column on smaller screens */
+}
+
+/* Responsive Grid Adjustments */
+@media screen and (max-width: 1800px) {
+  #home-grid { grid-template-columns: repeat(4, 1fr); }
+}
+@media screen and (max-width: 1500px) {
+  #home-grid { grid-template-columns: repeat(3, 1fr); }
+}
+@media screen and (max-width: 1200px) {
+  #home-grid { grid-template-columns: repeat(2, 1fr); }
+  #resources-grid, #settings-grid { grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+}
+@media screen and (max-width: 700px) {
+  #home-grid, #resources-grid, #settings-grid { grid-template-columns: 1fr; } /* Single column on small mobile */
+}
+
+/* Set a fixed height for widgets only on the home page */
+#home-grid .widget-card {
+  height: 300px;
+}
+
+#resources-grid .widget-card{
+  height: 300px;
 }
 
 /* === WIDGET CARD STYLING === */
@@ -185,7 +232,6 @@ body[data-active-view="live-view"] #live-view {
   /* aspect-ratio is no longer needed as grid-auto-rows handles it */
   transition: box-shadow 0.2s ease;
   overflow: hidden; /* Prevent content from spilling out of the card */
-  min-height: 150px; /* Set a minimum height for better appearance */
 }
 .widget-card:hover {
   box-shadow: 0 8px 20px rgba(0,0,0,0.2);
@@ -256,7 +302,7 @@ body[data-active-view="live-view"] #live-view {
   justify-content: center;
 }
 #live-time-card .time {
-  font-size: 3.5rem;
+  font-size: 3rem;
   font-weight: 700;
   animation: pulse-opacity 2.5s ease-in-out infinite;
 }
@@ -312,19 +358,6 @@ body[data-active-view="live-view"] #live-view {
   font-size: 1.2rem;
   color: var(--text-muted-color);
 }
-#summary-widget {
-  display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
-  gap: 20px;
-  padding: 20px;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  grid-template-rows: auto auto;
-  gap: 20px;
-  grid-column: span 2;
-  grid-row: span 1;
-  padding: 20px; /* Keep padding inside */
-}
 .summary-item {
   display: flex;
   flex-direction: column;
@@ -333,11 +366,6 @@ body[data-active-view="live-view"] #live-view {
   text-align: center;
   padding: 0;
   gap: 0;
-}
-.summary-item:first-child {
-    grid-column: 1 / -1; /* Span full width */
-    flex-direction: row;
-    gap: 15px;
 }
 .summary-label {
   font-size: 1rem;
@@ -461,34 +489,14 @@ body[data-active-view="live-view"] #live-view {
 }
 
 /* === SETTINGS PAGE === */
-#settings-grid {
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  align-content: start;
-}
-@media screen and (min-width: 1024px) {
-  #settings-grid {
-    grid-template-columns: 1fr 1fr 1fr; /* Three equal columns */
-  }
-}
 .settings-column {
   display: flex;
   flex-direction: column;
   gap: 20px;
 }
 @media screen and (min-width: 1024px) {
-  #settings-grid {
-    grid-template-columns: 1fr 1fr 1fr; /* Three equal columns */
-  }
-  .settings-column {
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
-    height: 100%;
-  }
-  .settings-column > .widget-card {
-    flex-grow: 1; /* Allow widgets to grow to fill the column */
-    display: flex; /* Ensure widgets are flex containers */
-  }
+  /* The flex-grow rule that caused stretching has been removed. */
+  /* Widgets will now size to their content. */
 }
 
 .settings-item {
@@ -497,6 +505,11 @@ body[data-active-view="live-view"] #live-view {
   gap: 10px;
   padding: 10px 0;
   border-bottom: 1px solid rgba(255,255,255,0.05);
+  flex-wrap: wrap;
+}
+
+.settings-item .name {
+  margin-right: auto;
   flex-wrap: wrap;
 }
 .settings-item .name {
@@ -540,8 +553,8 @@ body[data-active-view="live-view"] #live-view {
   border-radius: 12px;
   align-self: flex-start; /* Align to top of flex container */
   border: 0;
-  width: 35px;
-  height: 35px;
+  width: 50px; /* Make it square */
+  height: 50px; /* Match the dropdown height */
 }
 .settings-item .action-btn:hover { filter: brightness(1.2); }
 .settings-item .day-time-select {
@@ -865,6 +878,17 @@ body[data-active-view="live-view"] #live-view {
   position: relative;
   box-shadow: 0 0 0 5px var(--bg-color);
 }
+
+/* Default text visibility for week buttons */
+.week-button .week-text-short,
+.week-button .week-text-num {
+  display: none;
+}
+
+.week-button .week-text-full {
+  display: inline;
+  padding: 0 10px; /* Add some padding for the full text */
+}
 .week-button.is-current.active {
   color: var(--text-on-accent-color); /* Ensure text is white when it's the active current week */
 }
@@ -974,17 +998,15 @@ body[data-active-view="live-view"] #live-view {
   font-size: 1.2rem;
 }
 
-@media screen and (max-width: 1000px) {
+@media screen and (max-width: 700px) {
   body {
     padding: 100px 15px 120px 15px;
   }
-  .widget-grid {
-    grid-template-columns: 1fr;
-  }
-  #home-grid, #resources-grid {
+  /* The max-width: 1000px rule is now handled by more specific breakpoints above and below */
+  /* #home-grid, #resources-grid {
     grid-template-rows: none; /* Remove fixed rows for mobile */
-    grid-template-columns: 1fr; /* Ensure single column layout */
-  }
+    /* grid-template-columns: 1fr; */ /* Ensure single column layout */
+  /* } */
 
   #home-grid, #resources-grid, #settings-grid {
     height: auto; /* Allow grids to grow with content on mobile */
@@ -993,6 +1015,18 @@ body[data-active-view="live-view"] #live-view {
     display: none; /* Hide time widget on mobile */
   }
 }
+
+/* Responsive text for week buttons */
+@media screen and (max-width: 1500px) {
+  .week-button .week-text-full { display: none; }
+  .week-button .week-text-short { display: inline; }
+}
+
+@media screen and (max-width: 1200px) {
+  .week-button .week-text-short { display: none; }
+  .week-button .week-text-num { display: inline; }
+}
+
 
 /* Hide weeks bar on all pages except home page */
 #weeks-bar-container {
@@ -1003,7 +1037,7 @@ body[data-active-view="live-view"] #weeks-bar-container {
   animation: fadeIn 0.3s ease-in-out;
 }
 
-@media screen and (max-width: 1000px) {
+@media screen and (max-width: 700px) {
   .weeks-chooser {
     display: none; /* Hide desktop weeks bar on mobile */
   }
@@ -1057,6 +1091,15 @@ body[data-active-view="live-view"] #weeks-bar-container {
   display: flex;
 }
 
+.my-subject-widget-top-controls {
+  display: grid;
+  grid-template-columns: 1fr auto; /* Time select takes up space, button is auto-sized */
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 15px; /* Space between top controls and weekday chooser */
+}
+
+
 .my-subject-widget-header {
   display: flex;
   justify-content: space-between;
@@ -1066,18 +1109,6 @@ body[data-active-view="live-view"] #weeks-bar-container {
 .my-subject-widget-header .widget-title {
   font-size: 1.1rem;
 }
-
-  .my-subject-widget-footer {
-    display: grid;
-    grid-template-columns: 1fr 2fr; /* 1 part for button, 2 parts for select */
-    gap: 10px;
-    align-items: center;
-  }
-
-  .my-subject-widget-footer .action-btn.remove {
-    height: 50px; /* Match the height of the select dropdown */
-    width: 100%; /* Fill the grid cell */
-  }
 
   @media screen and (max-width: 1000px) {
     .my-subject-widget .my-subject-widget-header .widget-title {
@@ -1091,6 +1122,11 @@ body[data-active-view="live-view"] #weeks-bar-container {
     .my-subject-widget .weekday-btn {
       width: auto; /* Let the grid handle the width */
     }
+
+  #settings-grid #catalog-widget {
+    order: 99; /* Move catalog to the end on mobile */
+  }
+
   }
 
 #catalog-widget {

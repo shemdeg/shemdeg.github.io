@@ -107,7 +107,15 @@ main{
   flex-grow: 1;
   overflow-y: auto;
   margin-right: -10px;
+  min-height: 0;
   padding-right: 10px;
+  max-height: 65vh;
+}
+/* The actual list inside the scrollable container */
+#subjectList {
+  display: flex;
+  flex-direction: column;
+  gap: 5px; /* Add a small gap between subject items */
 }
 .search-input-container { position: relative; }
 .search-input-container .material-symbols-outlined { position: absolute; left: 15px; top: 50%; transform: translateY(-50%); color: var(--text-muted-color); }

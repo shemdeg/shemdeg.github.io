@@ -78,6 +78,8 @@
     "Default": { bg: "#121212", widget: "#1E1E1E", text: "#fff", accent: "#fff", accentVariant: "#fff", textOnAccent: "#000000" },    
     "Earth": { bg: "#121212", widget: "#1E1E1E", text: "#fff", accent: "#ff3a17ff", accentVariant: "#ff4c2dff", textOnAccent: "#FFFFFF" },
     "SciFi": { bg: "#0A0F1E", widget: "#1A243D", text: "#E0E8FF", accent: "#00D1FF", accentVariant: "#007B9A", textOnAccent: "#000000" },
+    "Green": { bg: "#121212", widget: "#1E1E1E", text: "#fff", accent: "#28b92dff", accentVariant: "rgba(79, 194, 84, 1)ff", textOnAccent: "#ffffffff" },
+    "Blue": { bg: "#121212", widget: "#1E1E1E", text: "#fff", accent: "#2196F3", accentVariant: "#42A5F5", textOnAccent: "#FFFFFF" },
     "Light": { bg: "#F7F7F7", widget: "#FFFFFF", text: "#000000", accent: "#000000", accentVariant: "#333333", textOnAccent: "#FFFFFF" },
     "Latte": { bg: "#ffe3d3", widget: "#fff8f3", text: "#422D24", accent: "#ac5a3a", accentVariant: "#5D4037", textOnAccent: "#FFFFFF" },
   };
@@ -399,10 +401,9 @@
   function initSummaryWidget() {
     // Remove old widgets if they exist
     $('#weeks-left-card')?.remove();
-    $('#quiz-counter-card')?.remove();
-    $('#summary-widget')?.remove();
+    $$('.summary-widget-card').forEach(c => c.remove());
 
-    // 2. Quiz stats
+    // Quiz stats
     let completedQuizzes = 0;
     let missedQuizzes = 0;
     let remainingQuizzes = 0;
@@ -440,28 +441,31 @@
     });
 
     // --- Create Widget ---
-    const createStatItem = (label, value, valueStyle = {}) => {
+    const createStatCard = (id, label, value, valueStyle = {}) => {
       const valueEl = el('div', { className: 'summary-value', textContent: value });
       Object.assign(valueEl.style, valueStyle);
-      return el('div', { className: 'summary-item' }, [
+      return el('div', { id, className: 'widget-card summary-widget-card' }, [
         valueEl,
         el('div', { className: 'summary-label', textContent: label })
       ]);
     };
 
     const completedStyle = { color: '#8c8c8c90' }; // Green
-    const missedStyle = missedQuizzes > 0 ? { color: '#ff3c2e' } : {}; // Red if > 0
+    const missedStyle = missedQuizzes > 0 ? { color: '#ff3c2e' } : { color: '#8c8c8c90' }; // Red if > 0, else gray
 
-    const summaryCard = el('div', {
-      id: 'summary-widget',
-      className: 'widget-card'
-    }, [
-      createStatItem('ჩასაბარებელი ქვიზი', remainingQuizzes, {}),
-      createStatItem('ჩაბარებული ქვიზი', completedQuizzes, completedStyle),
-      createStatItem('აღსადგენი ქვიზი', missedQuizzes, missedStyle),
-    ]);
+    const remainingCard = createStatCard('remaining-quizzes', 'ჩასაბარებელი ქვიზი', remainingQuizzes, {});
+    const completedCard = createStatCard('completed-quizzes', 'ჩაბარებული ქვიზი', completedQuizzes, completedStyle);
+    const missedCard = createStatCard('missed-quizzes', 'აღსადგენი ქვიზი', missedQuizzes, missedStyle);
 
-    $('#live-time-card').after(summaryCard);
+    // Style the cards to be more like the time widget
+    [remainingCard, completedCard, missedCard].forEach(card => {
+      card.style.textAlign = 'center';
+      card.style.justifyContent = 'center';
+    });
+
+    $('#live-time-card').after(missedCard);
+    $('#live-time-card').after(completedCard);
+    $('#live-time-card').after(remainingCard);
   }
 
   function renderWeeksBar() {
@@ -471,7 +475,11 @@
     // --- Desktop Weeks Bar (Horizontal List) ---
     const chooser = el('div', { className: 'weeks-chooser' });
     SEMESTER_WEEKS.forEach(week => {
-      const btn = el('button', { className: 'week-button', textContent: `კვირა ${week.n}` });
+      const btn = el('button', { className: 'week-button' }, [
+        el('span', { className: 'week-text-full', textContent: `კვირა ${week.n}` }),
+        el('span', { className: 'week-text-short', textContent: `კვ. ${week.n}` }),
+        el('span', { className: 'week-text-num', textContent: `${week.n}` })
+      ]);
       if (week.n === state.selectedWeekNumber) btn.classList.add('active');
       if (state.currentWeekData && week.n === state.currentWeekData.n) btn.classList.add('is-current');
 
@@ -768,9 +776,8 @@
     const grid = $('#settings-grid');
     grid.innerHTML = '';
 
-    const mySubjectsColumn = el('div', { className: 'settings-column' }); // This will now hold the carousel wrapper
-    const catalogColumn = el('div', { className: 'settings-column' });
-    const sideColumn = el('div', { className: 'settings-column' });
+    const leftColumn = el('div', { className: 'settings-column' });
+    const rightColumn = el('div', { className: 'settings-column' });
 
     const sortedSelected = state.selected.map(id => state.cache[id]).filter(Boolean).sort((a, b) => a.name.localeCompare(b.name));
     const subjectWidgetContainer = el('div', { className: 'subject-widget-container' });
@@ -847,11 +854,7 @@
       if (filter) {
         subjectsToShow = allSubjects.filter(s => s.name.toLowerCase().includes(filter.toLowerCase()));
       } else {
-        const addedCount = state.selected.length;
-        // Show all added subjects, plus up to 5 more.
-        const nonAddedSubjects = allSubjects.filter(s => !state.selected.includes(s.id));
-        subjectsToShow = [...allSubjects.filter(s => state.selected.includes(s.id)), ...nonAddedSubjects.slice(0, 5)];
-
+        subjectsToShow = allSubjects; // Show all subjects, no limit
       }
 
       subjectsToShow.forEach(subj => {
@@ -904,13 +907,10 @@
     renderCatalogItems();
 
     const catalogCard = el('div', { id: 'catalog-widget', className: 'widget-card' }, [
-      el('h3', { className: 'widget-title', textContent: 'საგნების კატალოგი' }),
+      el('h3', { className: 'widget-title', textContent: 'საგნების კატალოგი'}),
       searchContainer,
       catalogContent
     ]);
-
-    mySubjectsColumn.append(subjectWidgetContainer);
-    mySubjectsColumn.append(arrowsWidget);
 
     // Function to delete a custom subject from the database
     const deleteCustomSubjectFromDB = async (subjectId) => {
@@ -932,14 +932,16 @@
         className: 'widget-card',
         style: 'padding: 10px;' // Use widget color, just adjust padding
     }, [manageButton]);
-    mySubjectsColumn.append(manageWidget);
 
-    catalogColumn.append(catalogCard);
-    sideColumn.append(createDurationWidget());
-    sideColumn.append(createThemeWidget());
-    sideColumn.append(createLogoutWidget());
+    // --- Assemble Columns ---
+    // Left Column: Manage Subjects button and Catalog
+    leftColumn.append(manageWidget, catalogCard);
 
-    grid.append(mySubjectsColumn, catalogColumn, sideColumn);
+    // Right Column: My Subjects carousel, Duration, Theme, and Logout
+    rightColumn.append(subjectWidgetContainer, arrowsWidget, createDurationWidget(), createThemeWidget(), createLogoutWidget());
+
+    // Add columns to the grid
+    grid.append(leftColumn, rightColumn);
   }
 
   function createMySubjectWidget(subj) {
@@ -979,13 +981,6 @@
       weekdayContainer.append(dayBtn);
     });
 
-    const footerContainer = el('div', { className: 'my-subject-widget-footer' });
-
-    const titleEl = el('h3', { className: 'widget-title', textContent: subj.name, classList: subj.icon ? 'has-icon' : '' });
-    if (subj.icon) {
-      titleEl.prepend(el('span', { className: 'material-symbols-outlined', textContent: subj.icon }));
-    }
-
     const removeBtn = el('button', { className: 'action-btn remove' }, [
       el('span', { className: 'material-symbols-outlined', textContent: 'close' })
     ]);
@@ -1009,14 +1004,19 @@
       }
     };
 
-    footerContainer.append(removeBtn, timeSelect);
+    const titleEl = el('h3', { className: 'widget-title', textContent: subj.name, classList: subj.icon ? 'has-icon' : '' });
+    if (subj.icon) {
+      titleEl.prepend(el('span', { className: 'material-symbols-outlined', textContent: subj.icon }));
+    }
+
+    const topControls = el('div', { className: 'my-subject-widget-top-controls' }, [timeSelect, removeBtn]);
 
     return el('div', { className: 'widget-card my-subject-widget' }, [
       el('div', { className: 'my-subject-widget-header' }, [
         titleEl,
       ]),
-      weekdayContainer,
-      footerContainer
+      topControls,
+      weekdayContainer
     ]);
   }
 
