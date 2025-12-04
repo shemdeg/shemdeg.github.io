@@ -50,6 +50,7 @@
     db: null,
     auth: null,
     nextUpdateTimeout: null,
+    userListener: null, // To store the unsubscribe function for the real-time listener
   };
 
   const daysOfWeek = ["ორშაბათი", "სამშაბათი", "ოთხშაბათი", "ხუთშაბათი", "პარასკევი", "შაბათი"];
@@ -74,11 +75,9 @@
   ];
 
   const THEMES = {
-    "Default": { bg: "#121212", widget: "#1E1E1E", text: "#fff", accent: "#fff", accentVariant: "#fff", textOnAccent: "#000000" },
-    "Ocean": { bg: "#0F2027", widget: "#203A43", text: "#ffffff", accent: "#1488CC", accentVariant: "#2B32B2", textOnAccent: "#FFFFFF" },
+    "Default": { bg: "#121212", widget: "#1E1E1E", text: "#fff", accent: "#fff", accentVariant: "#fff", textOnAccent: "#000000" },    
+    "Earth": { bg: "#121212", widget: "#1E1E1E", text: "#fff", accent: "#ff3a17ff", accentVariant: "#ff4c2dff", textOnAccent: "#FFFFFF" },
     "SciFi": { bg: "#0A0F1E", widget: "#1A243D", text: "#E0E8FF", accent: "#00D1FF", accentVariant: "#007B9A", textOnAccent: "#000000" },
-    "Sunset": { bg: "#2C0A1E", widget: "#4F1C3A", text: "#ffffff", accent: "#FF8C61", accentVariant: "#C83C66", textOnAccent: "#000000" },
-    "Forest": { bg: "#2C3E36", widget: "#3E564B", text: "#F0F5F2", accent: "#6AEB8E", accentVariant: "#4CAF50", textOnAccent: "#000000" },
     "Light": { bg: "#F7F7F7", widget: "#FFFFFF", text: "#000000", accent: "#000000", accentVariant: "#333333", textOnAccent: "#FFFFFF" },
     "Latte": { bg: "#ffe3d3", widget: "#fff8f3", text: "#422D24", accent: "#ac5a3a", accentVariant: "#5D4037", textOnAccent: "#FFFFFF" },
   };
@@ -132,49 +131,61 @@
     setCookie('lectureDuration', state.lectureDuration, 365);
 
     // Re-render pages to reflect changes without a full reload
-    renderHomePage();
-    renderResourcesPage();
+    // No need to re-render here if logged in; the listener will handle it.
+    // If not logged in, we need to manually re-render.
+    if (!state.user) {
+      bootAfterDataLoad();
+    }
     console.log("Settings auto-saved.");
   }
 
+  function loadDataFromCookies() {
+    return {
+      selected: JSON.parse(getCookie('selectedSubjects') || '[]'),
+      userDays: JSON.parse(getCookie('userDays') || '{}'),
+      userThemeName: getCookie('userThemeName') || "Default",
+      lectureDuration: getCookie('lectureDuration') || "03:00",
+      quizCompletion: JSON.parse(getCookie('quizCompletion') || '{}'),
+      cache: JSON.parse(getCookie('customSubjects') || '{}') // Also load custom subjects from cookies
+    };
+  }
+
   async function loadData() {
-    // Load catalog
-    const catalogSnap = await state.db.collection("subjects").get();
-    state.catalog = catalogSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-
-    // Load user data
-    let data = {};
+    // Detach any existing listener to prevent memory leaks on re-login
+    if (state.userListener) {
+      state.userListener();
+      state.userListener = null;
+    }
+  
+    // Load public catalog once
+    try {
+      const catalogSnap = await state.db.collection("subjects").get();
+      state.catalog = catalogSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+    } catch (error) {
+      console.error("Failed to load public subject catalog:", error);
+    }
+  
     if (state.user) {
-      const userSnap = await state.db.collection("users").doc(state.user.uid).get();
-      data = userSnap.exists ? userSnap.data() : {};
+      // Set up a real-time listener for user data
+      const userRef = state.db.collection("users").doc(state.user.uid);
+      state.userListener = userRef.onSnapshot(doc => {
+        console.log("User data updated in real-time.");
+        const data = doc.exists ? doc.data() : {};
+        state.selected = data.subjects || [];
+        state.userDays = data.days || {};
+        state.userThemeName = data.userThemeName || "Default";
+        state.quizCompletion = data.quizCompletion || {};
+        state.lectureDuration = data.lectureDuration || "03:00";
+        state.cache = data.customSubjects || {};
+        applyTheme(state.userThemeName);
+        bootAfterDataLoad();
+      });
     } else {
-      // Fallback to cookies if not logged in
-      data.subjects = JSON.parse(getCookie('selectedSubjects') || '[]');
-      data.days = JSON.parse(getCookie('userDays') || '{}');
-      data.userThemeName = getCookie('userThemeName') || "Default";
-      data.lectureDuration = getCookie('lectureDuration') || "03:00";
-      data.quizCompletion = JSON.parse(getCookie('quizCompletion') || '{}');
-    }
-
-    state.selected = data.subjects || [];
-    state.userDays = data.days || {};
-    state.userThemeName = data.userThemeName || "Default";
-    applyTheme(state.userThemeName);
-
-    // Load custom subjects and merge into cache
-    if (data.customSubjects) {
-      Object.assign(state.cache, data.customSubjects);
-      // Also add them to the `selected` array if they aren't already
-      Object.keys(data.customSubjects).forEach(id => !state.selected.includes(id) && state.selected.push(id));
-      // We just load them into the cache. The `state.selected` array from the DB is the source of truth for what's on the home page.
-    }
-    state.quizCompletion = data.quizCompletion || {};
-    state.lectureDuration = data.lectureDuration || "03:00";
-    // Ensure subjects are in cache
-    const toLoad = state.selected.filter(id => !state.cache[id]);
-    for (const id of toLoad) {
-      const subj = state.catalog.find(c => c.id === id);
-      if (subj) state.cache[id] = subj;
+      // Handle logged-out state (using cookies)
+      const data = loadDataFromCookies();
+      Object.assign(state, data);
+      applyTheme(state.userThemeName);
+      bootAfterDataLoad();
     }
   }
 
@@ -223,7 +234,7 @@
     const isSelectedWeekCurrent = currentWeekData && (selectedWeekNumber === currentWeekData.n);
 
     return subjs.sort((a, b) => {
-      // For the current week, sort by "ended" status first.
+      // For the current week, sort by "ended" status first
       if (isSelectedWeekCurrent) {
         const isEndedA = isSubjectEnded(a, now, lectureDurationMs);
         const isEndedB = isSubjectEnded(b, now, lectureDurationMs);
@@ -234,7 +245,7 @@
 
       // For all weeks (or for subjects with the same "ended" status on the current week),
       // sort by day, then time.
-      if (a.dayIndex !== b.dayIndex) return a.dayIndex - b.dayIndex;
+      if (a.dayIndex !== b.dayIndex) return (a.dayIndex === -1 ? 7 : a.dayIndex) - (b.dayIndex === -1 ? 7 : b.dayIndex);
       if (a.time && b.time) return a.time.localeCompare(b.time);
       return a.name.localeCompare(b.name); // Fallback to name sort.
     });
@@ -613,11 +624,17 @@
       }
 
       const dayCircle = el('div', { className: 'day-circle' });
-      if (subj.dayIndex !== -1) {
+      if (subj.isCustom) {
+        dayCircle.textContent = 'სხვა';
+        dayCircle.title = 'სხვა საგანი';
+      } else if (subj.dayIndex !== -1) {
         dayCircle.textContent = dayAbbreviations[subj.dayIndex];
       } else {
         dayCircle.append(el('span', { className: 'material-symbols-outlined', textContent: 'event_busy' }));
         dayCircle.title = 'დღე არ არის მითითებული';
+      }
+      if (isUpcoming) {
+        dayCircle.classList.add('is-upcoming');
       }
 
       const headerEl = el('div', { className: 'subject-card-header' }, [
@@ -804,7 +821,12 @@
     const catalogContent = el('div', { className: 'settings-widget-content no-padding-right' });
 
     const renderCatalogItems = (filter = '') => {
-      const allSubjects = [...state.catalog, ...Object.values(state.cache).filter(s => s.isCustom)];
+      // Create a map to ensure uniqueness, preferring items from cache (which includes custom subjects)
+      const subjectMap = new Map();
+      state.catalog.forEach(subj => subjectMap.set(subj.id, subj));
+      Object.values(state.cache).forEach(subj => subjectMap.set(subj.id, subj));
+
+      const allSubjects = Array.from(subjectMap.values());
 
       catalogContent.innerHTML = '';
       let subjectsToShow;
@@ -826,7 +848,10 @@
         subjectsToShow = allSubjects.filter(s => s.name.toLowerCase().includes(filter.toLowerCase()));
       } else {
         const addedCount = state.selected.length;
-        subjectsToShow = [...allSubjects.slice(0, addedCount), ...allSubjects.slice(addedCount, addedCount + 5)];
+        // Show all added subjects, plus up to 5 more.
+        const nonAddedSubjects = allSubjects.filter(s => !state.selected.includes(s.id));
+        subjectsToShow = [...allSubjects.filter(s => state.selected.includes(s.id)), ...nonAddedSubjects.slice(0, 5)];
+
       }
 
       subjectsToShow.forEach(subj => {
@@ -846,6 +871,10 @@
             // Filter from selected list
             state.selected = state.selected.filter(id => id !== subj.id);
             delete state.userDays[subj.id];
+            // If it's a custom subject, also remove it from the cache to prevent re-adding on refresh
+            if (subj.isCustom) {
+              delete state.cache[subj.id];
+            }
 
             autoSave();
             renderSettingsPage();
@@ -855,7 +884,9 @@
           button.onclick = () => {
             state.selected.push(subj.id);
             state.userDays[subj.id] = { day: daysOfWeek[0], time: "09:00" };
-            autoSave();
+            // No autoSave() here, let the user configure day/time first.
+            // The save will happen when they change day/time or click save in settings.
+            // We need to re-render to show the new item in the "My Subjects" carousel.
             renderSettingsPage();
           };
         }
@@ -1103,8 +1134,15 @@
     });
   }
 
-  async function bootAfterLogin() {
-    await loadData();
+  function bootAfterDataLoad() {
+    // This function runs after data is loaded/updated
+    // Ensure all selected subjects are in the cache
+    const toLoad = state.selected.filter(id => !state.cache[id]);
+    for (const id of toLoad) {
+      const subj = state.catalog.find(c => c.id === id);
+      if (subj) state.cache[id] = subj;
+    }
+
     flattenWeeks();
     initCurrentWeek();
 
@@ -1113,23 +1151,32 @@
     renderResourcesPage();
     renderSettingsPage();
 
-    initLiveTime();
     initSummaryWidget();
+    scheduleNextUpdate();
+  }
+
+  async function bootAfterLogin() {
+    await loadData();
+    initLiveTime();
     initNavigation();
-    scheduleNextUpdate(); // Initial call to schedule updates
   }
 
   function initAuth() {
-    state.auth.onAuthStateChanged(async u => {
-      state.user = u || null;
+    state.auth.onAuthStateChanged(async user => {
+      state.user = user || null;
       const loginOverlay = $("#login-overlay");
       const loadingOverlay = $("#loadingOverlay");
       try {
-        if (state.user) {
+        if (user) {
+          // User is logged in
           loginOverlay.style.display = "none";
           await bootAfterLogin();
         } else {
+          // User is logged out
+          if (state.userListener) state.userListener(); // Unsubscribe from real-time updates
+          state.userListener = null;
           loginOverlay.style.display = "flex";
+          await bootAfterLogin(); // Now boot with data from cookies
         }
       } catch (error) {
         console.error("Bootstrapping failed:", error);
@@ -1137,25 +1184,7 @@
       } finally {
         loadingOverlay.classList.add("hidden");
       }
-    });
-
-    $("#signInBtn").onclick = async () => {
-      const provider = new firebase.auth.GoogleAuthProvider();
-      try {
-        await state.auth.signInWithPopup(provider);
-      } catch (err) {
-        console.error("Sign-in error:", err);
-        let userMessage = "Sign-in failed. Please try again.";
-        if (err.code === 'auth/popup-closed-by-user') {
-          return;
-        } else if (err.code === 'auth/popup-blocked') {
-          userMessage = "Sign-in popup was blocked by the browser. Please allow popups for this site and try again.";
-        } else {
-          userMessage = `Sign-in failed: ${err.message}`;
-        }
-        alert(userMessage);
-      }
-    };
+    });    
   }
 
   function main() {
@@ -1166,6 +1195,21 @@
         firebase.initializeApp(cfg);
         state.auth = firebase.auth();
         state.db = firebase.firestore();
+        
+        $("#signInBtn").onclick = async () => {
+          const provider = new firebase.auth.GoogleAuthProvider();
+          try {
+            await state.auth.signInWithPopup(provider);
+          } catch (err) {
+            console.error("Sign-in error:", err);
+            if (err.code === 'auth/popup-closed-by-user') return;
+            const userMessage = err.code === 'auth/popup-blocked'
+              ? "Sign-in popup was blocked. Please allow popups for this site."
+              : `Sign-in failed: ${err.message}`;
+            alert(userMessage);
+          }
+        };
+
         initAuth();
       })
       .catch(() => {

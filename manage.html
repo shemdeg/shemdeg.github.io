@@ -1,0 +1,1156 @@
+<!DOCTYPE html>
+<html lang="ka">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Manage Subjects - shemdeg</title>
+<link rel="icon" href="/icons/shicon.png">
+
+<!-- SEO META -->
+<meta name="description" content="Manage your custom subjects or administer public subjects on Weekge.">
+<meta name="keywords" content="weekge, week, syllabus editor, study manager, custom subjects">
+<meta name="author" content="weekge">
+<meta name="theme-color" content="#0B1216">
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet" />
+
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Georgian:wght@100..900&display=swap');
+
+:root{
+  --bg-color: #121212;
+  --widget-color: #1E1E1E;
+  --text-color: #E0E0E0;
+  --text-muted-color: color-mix(in srgb, var(--text-color) 60%, transparent);
+  --accent-color: #fff;
+  --text-on-accent-color: #000000;
+  --danger-color: #B00020;
+  --border-radius: 16px;
+  --font-family: "Noto Sans Georgian", sans-serif;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar{width:.35rem}
+::-webkit-scrollbar-thumb{background:var(--accent-color); border-radius: 2px;}
+
+/* Base */
+*{box-sizing:border-box;margin:0;padding:0;font-family: var(--font-family);}
+body{background:var(--bg-color);color:var(--text-color);height:100vh;display:grid;grid-template-rows:1fr;overflow:hidden;}
+
+  /* === Loading Overlay === */
+  #loadingOverlay {
+    position: fixed;
+    inset: 0;
+    z-index: 10001;
+    background: var(--bg-color);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    transition: opacity .3s ease, visibility .3s ease;
+  }
+  #login-overlay {
+    display: none; position: fixed; inset: 0; background: var(--bg-color); z-index: 10000; 
+    flex-direction: column; align-items: center; justify-content: center; gap: 20px;
+  }
+  #login-overlay h1 { font-size: 3rem; color: var(--accent-color); }
+  #signInBtn {
+    background: #fff; color: #000; border: none; padding: 12px 24px; font-size: 1.1rem; 
+    cursor: pointer; display: flex; align-items: center; gap: 12px; border-radius: 8px;
+  }
+  #signInBtn img { height: 24px; user-select: none; }
+
+  #loadingOverlay.hidden {
+    opacity: 0;
+    visibility: hidden;
+  }
+  #loadingOverlay .spinner {
+    width: 80px;
+    height: 80px;
+    border: 8px solid rgba(255,255,255,.1);
+    border-top: 8px solid var(--accent-color);
+    border-radius: 50%;
+    animation: spin 0.2s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  #loadingOverlay p {
+    margin-top: 16px;
+    color: var(--text-muted-color);
+  }
+
+/* Layout (4-panel) */
+main{
+  display:grid;
+  grid-template-columns: 300px 220px 1fr 280px;
+  gap: 20px;
+  padding: 20px;
+  height: 100%;
+}
+.editor-column {
+  background-color: var(--widget-color);
+  border-radius: var(--border-radius);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  min-height: 0;
+}
+
+/* Column 1: Subjects */
+#subjects-column .column-content {
+  flex-grow: 1;
+  overflow-y: auto;
+  margin-right: -10px;
+  padding-right: 10px;
+}
+.search-input-container { position: relative; }
+.search-input-container .material-symbols-outlined { position: absolute; left: 15px; top: 50%; transform: translateY(-50%); color: var(--text-muted-color); }
+#searchBox { width: 100%; padding: 12px 15px 12px 45px; background-color: color-mix(in srgb, var(--text-color) 3%, transparent); border: 1px solid transparent; border-radius: 999px; color: var(--text-color); font-size: 1rem; outline: none; }
+#searchBox:focus { border-color: var(--accent-color); }
+
+.subject-category-title {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-muted-color);
+  margin: 20px 0 10px 5px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.subject-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border-radius: 12px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background-color .2s ease;
+  user-select: none;
+}
+.subject-item:hover { background-color: color-mix(in srgb, var(--text-color) 5%, transparent); }
+.subject-item.active { background-color: var(--accent-color); color: var(--text-on-accent-color); }
+.subject-item.active .subject-icon { color: var(--text-on-accent-color); }
+.subject-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted-color);
+}
+.add-subject-controls { margin-top: auto; }
+.add-subject-controls button, .add-subject-controls input {
+  width: 100%;
+  padding: 12px;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  border: none;
+  font-size: 1rem;
+}
+#addSubjectBtn { background-color: var(--accent-color); color: var(--text-on-accent-color); display: flex; align-items: center; justify-content: center; gap: 8px; }
+#newSubjectInput { background-color: color-mix(in srgb, var(--text-color) 5%, transparent); color: var(--text-color); display: none; }
+
+/* Column 2: Controls */
+.control-btn {
+  width: 100%;
+  padding: 12px;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
+  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.control-btn.primary { background-color: var(--accent-color); color: var(--text-on-accent-color); }
+.control-btn.secondary { background-color: color-mix(in srgb, var(--text-color) 5%, transparent); color: var(--text-color); }
+.control-btn:hover { filter: brightness(1.15); }
+.control-btn.active { background-color: var(--accent-color); color: var(--text-on-accent-color); }
+.control-btn.danger { background-color: var(--danger-color); color: white; }
+
+.editor-week-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 10px;
+  margin-top: 10px;
+}
+.editor-week-item {
+  aspect-ratio: 1;
+  border-radius: 12px;
+  font-size: 1.2rem;
+}
+
+/* Column 3: Editor */
+#editor.fadeout{opacity:0;filter:blur(4px);transition:opacity .1s ease, filter .1s ease;}
+#editor h2{font-size:1.5rem;margin-bottom:16px;color:var(--accent-color);}
+label{display:block;font-weight:700;margin:16px 0 4px;}
+input, select {
+  width:100%;padding:12px;border:none;
+  background-color: color-mix(in srgb, var(--text-color) 5%, transparent);
+  color:var(--text-color);font-size:1rem;margin-bottom:10px;
+  border-radius: 8px;
+}
+select { -webkit-appearance: none; appearance: none; }
+
+.global h3 { color: var(--accent-color); margin-bottom: 6px; }
+.topicField {
+  width: 100%; min-height: 120px; max-height: 300px; overflow-y: auto;
+  background-color: color-mix(in srgb, var(--text-color) 5%, transparent);
+  color: var(--text-color); padding: 12px; font-size: 1rem; border: none;
+  outline: none; white-space: pre-wrap; word-wrap: break-word;
+  line-height: 1.5; border-radius: 8px;
+}
+.topicField:focus { background-color: color-mix(in srgb, var(--text-color) 8%, transparent); }
+
+.customBtnRow {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding-left: 35px;
+    margin-top: 15px;
+}
+
+.drag-handle {
+    position: absolute;
+    top: 50%;
+    left: 0;
+    transform: translateY(-50%);
+    cursor: grab;
+    color: var(--text-muted-color);
+    padding: 0 8px;
+}
+.customBtnRow input { margin-bottom: 0; }
+.customBtnRow .removeBtn {
+  background: transparent; color: var(--text-muted-color); border: none;
+  width: 40px; height: 40px; border-radius: 12px; cursor: pointer;
+  display: grid; place-items: center; transition: all 0.2s ease;
+}
+.customBtnRow .removeBtn:hover { background-color: var(--danger-color); color: white; }
+.weekBtns { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 15px; }
+.weekBtns .addBtn {
+  flex: 1;
+  padding: 10px;
+  background: color-mix(in srgb, var(--text-color) 10%, transparent);
+  color: var(--text-color);
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: background .2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.weekBtns .addBtn:hover { background: color-mix(in srgb, var(--text-color) 15%, transparent); }
+
+/* Column 4: Visibility */
+.visibility-option {
+  padding: 20px;
+  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, var(--text-color) 10%, transparent);
+  cursor: pointer;
+  transition: all .2s ease;
+}
+.visibility-option:hover {
+  background-color: color-mix(in srgb, var(--text-color) 5%, transparent);
+}
+.visibility-option.active {
+  background-color: var(--accent-color);
+  color: var(--text-on-accent-color);
+  border-color: var(--accent-color);
+}
+.visibility-option.active .visibility-icon,
+.visibility-option.active .visibility-desc {
+  color: var(--text-on-accent-color) !important;
+}
+.visibility-icon {
+  font-size: 2.5rem;
+  margin-bottom: 10px;
+  color: var(--accent-color);
+}
+.visibility-title {
+  font-weight: 600;
+  margin-bottom: 5px;
+}
+.visibility-desc {
+  font-size: 0.9rem;
+  color: var(--text-muted-color);
+  line-height: 1.4;
+}
+#saveStatus {
+  font-weight: 600;
+  font-size: 1rem;
+  text-align: center;
+  padding: 10px;
+  border-radius: 8px;
+  transition: all .2s ease;
+}
+#saveStatus.saving{ background-color: #ffc423; color: black; }
+#saveStatus.saved{ background-color: #4CAF50; color: white; }
+#saveStatus.error{ background-color: var(--danger-color); color: white; }
+#saveStatus.dirty{ background-color: #ff8c00; color: black; }
+
+/* Mobile */
+@media(max-width:1200px){
+  main{
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto 1fr auto;
+    overflow-y: auto;
+    padding: 15px;
+  }
+  .editor-column {
+    min-height: 200px;
+    height: auto;
+  }
+  #editor-column {
+    min-height: 400px;
+  }
+  .editor-week-grid {
+    grid-template-columns: repeat(auto-fit, minmax(60px, 1fr));
+  }
+}
+
+/* Create Subject Popup */
+#createSubjectPopup {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.6);
+  backdrop-filter: blur(8px);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+}
+.popup-content {
+  background: var(--widget-color);
+  border: 1px solid #0006;
+  width: min(92vw, 450px);
+  padding: 25px;
+  border-radius: var(--border-radius);
+  box-shadow: 0 10px 40px rgba(0,0,0,.5);
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+.popup-content h3 { font-size: 1.5rem; color: var(--text-color); text-align: center; }
+.popup-mode-selector { display: grid; grid-template-columns: 1fr 1fr; background-color: color-mix(in srgb, var(--text-color) 5%, transparent); border-radius: 8px; padding: 4px; }
+.popup-mode-selector .mode-btn { background: transparent; border: none; color: var(--text-muted-color); padding: 10px; font-weight: 600; font-size: 1rem; border-radius: 6px; cursor: pointer; }
+.popup-mode-selector .mode-btn.active { background: var(--accent-color); color: var(--text-on-accent-color); }
+.popup-row { display: flex; flex-direction: column; gap: 5px; }
+.popup-row label { font-weight: 500; font-size: 0.9rem; color: var(--text-muted-color); }
+.popup-row input { margin-bottom: 0; }
+.popup-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
+.popup-actions button {
+  padding: 12px;
+  border: none;
+  font-weight: 700;
+  cursor: pointer;
+  border-radius: 8px;
+  font-size: 1rem;
+}
+.popup-actions .create-btn { background: var(--accent-color); color: var(--text-on-accent-color); }
+.popup-actions .cancel-btn { background: color-mix(in srgb, var(--text-color) 10%, transparent); color: var(--text-color); }
+</style>
+</head>
+<body>
+
+<!-- Sign-in Overlay -->
+<div id="login-overlay">
+  <h1>SHEMDEG?</h1>
+  <button id="signInBtn">
+    <img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" alt="Google logo">
+    Sign in with Google
+  </button>
+</div>
+
+<!-- Loading -->
+<div id="loadingOverlay">
+  <div class="spinner"></div>
+  <p>Loading...</p>
+</div>
+
+<main>
+  <!-- Column 1: Subjects -->
+  <aside id="subjects-column" class="editor-column">
+    <a href="index.html" class="control-btn secondary" style="text-decoration: none;">
+      <span class="material-symbols-outlined">arrow_back</span>
+      Back to Home
+    </a>
+    <hr style="border-color: #ffffff1a; border-style: solid; width: 100%;">
+    <h3>My Subjects</h3>
+    <div class="search-input-container">
+      <span class="material-symbols-outlined">search</span>
+      <input type="search" id="searchBox" placeholder="Find a subject...">
+    </div>
+    <div id="subjectList" class="column-content"></div>
+    <div class="add-subject-controls">
+      <input type="text" id="newSubjectInput" placeholder="Enter new subject name and press Enter">
+      <button id="addSubjectBtn" class="control-btn primary">
+        <span class="material-symbols-outlined">add</span>
+        Create New Subject
+      </button>
+    </div>
+  </aside>
+
+  <!-- Column 2: Controls -->
+  <aside id="weeksPanel" class="editor-column" style="display:none;">
+    <button id="applyNavBtn" class="control-btn primary" title="Ctrl + S">
+      <span class="material-symbols-outlined">save</span>
+      Apply Changes
+    </button>
+    <div id="saveStatus"></div>
+    <button id="globalWeekBtn" class="control-btn secondary">Global</button>
+    <hr style="border-color: #ffffff1a; border-style: solid; margin: 5px 0;">
+    <div class="editor-week-grid">
+      <!-- Week buttons will be rendered here -->
+    </div>
+    <button id="deleteNavBtn" class="control-btn danger" style="margin-top: auto;">
+      <span class="material-symbols-outlined">delete_forever</span>
+      Delete Subject
+    </button>
+  </aside>
+
+  <!-- Column 3: Editor -->
+  <section id="editor-column" class="editor-column" style="display:none;">
+    <div id="editor"></div>
+  </section>
+
+  <!-- Column 4: Visibility -->
+  <aside id="visibilityPanel" class="editor-column" style="display:none;">
+    <h3>Visibility</h3>
+    <div class="visibility-option" data-visibility="private">
+      <span class="material-symbols-outlined visibility-icon">lock</span>
+      <div class="visibility-title">Private</div>
+      <div class="visibility-desc">Only you can see and use this subject.</div>
+    </div>
+    <div class="visibility-option" data-visibility="public">
+      <span class="material-symbols-outlined visibility-icon">public</span>
+      <div class="visibility-title">Public</div>
+      <div class="visibility-desc">Everyone can see and add this subject from the catalog.</div>
+    </div>
+  </aside>
+
+</main>
+
+<!-- Create Subject Popup -->
+<div id="createSubjectPopup">
+  <div class="popup-content">
+    <h3>Create New Subject</h3>
+    <div class="popup-mode-selector">
+      <button class="mode-btn active" data-mode="user">As User</button>
+      <button class="mode-btn" data-mode="admin">As Admin</button>
+    </div>
+    <div class="popup-row">
+      <label for="popupSubjectName">Subject Name</label>
+      <input type="text" id="popupSubjectName" placeholder="e.g., Microeconomics">
+    </div>
+    <div class="popup-row" id="popupIdRow" style="display: none;">
+      <label for="popupSubjectId">Subject ID</label>
+      <input type="text" id="popupSubjectId" placeholder="e.g., ECON101">
+    </div>
+    <div class="popup-actions">
+      <button class="cancel-btn" id="popupCancelBtn">Cancel</button>
+      <button class="create-btn" id="popupCreateBtn">Create</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// Wrap the entire script in an IIFE to avoid polluting the global scope
+(function () {
+  /* === UTILITIES === */
+  const $ = s => document.querySelector(s);
+  const $$ = s => document.querySelectorAll(s);
+  const el = (t, p = {}, kids = []) => {
+    if (typeof p === 'string') return el(t, {}, [p]);
+    const e = document.createElement(t);
+    Object.assign(e, p);
+    kids.forEach(k => e.append(k));
+    return e;
+  };
+
+  /* === STATE === */
+  const state = {
+    user: null,
+    db: null,
+    isAdmin: false,
+    auth: null,
+    customSubjects: {}, // Holds all custom subjects for the user
+    currentSubjectId: null,
+    draftSubjectData: null, // The version of the subject being edited
+    currentWeek: null,
+    isDirty: false,
+  };
+
+  /* === UI & DOM REFERENCES === */
+  const saveStatusEl = $("#saveStatus");
+  const editorContainer = $("#editor");
+  const editorTitle = $("#editorTitle");
+  const applyNavBtn = $("#applyNavBtn");
+  const weeksPanel = $("#weeksPanel");
+  const editorColumn = $("#editor-column");
+  const visibilityPanel = $("#visibilityPanel");
+  const deleteNavBtn = $("#deleteNavBtn");
+  const globalWeekBtn = $("#globalWeekBtn");
+  const ADMIN_EMAILS = ["davit.gvakharia@gmail.com"]; // Obfuscation is good, but for clarity here it's plain.
+
+
+  /* === CORE LOGIC === */
+
+  function setSaveState(status) {
+    saveStatusEl.className = "";
+    state.isDirty = false;
+    applyNavBtn.classList.remove('dirty');
+    switch (status) {
+      case "saving":
+        saveStatusEl.textContent = "⏳ Saving...";
+        saveStatusEl.classList.add("saving");
+        break;
+      case "saved":
+        saveStatusEl.textContent = "✅ All changes saved";
+        saveStatusEl.classList.add("saved");
+        break;
+      case "error":
+        saveStatusEl.textContent = "❌ Save Error";
+        saveStatusEl.classList.add("error");
+        state.isDirty = true;
+        break;
+      case "dirty":
+        saveStatusEl.textContent = "⚠️ Unsaved Changes";
+        saveStatusEl.classList.add("dirty");
+        state.isDirty = true;
+        applyNavBtn.classList.add('dirty');
+        break;
+    }
+  }
+
+  function markDirty() {
+    if (!state.isDirty) {
+      setSaveState("dirty");
+    }
+  }
+
+  function fadeEditor(callback) {
+    editorContainer.classList.add("fadeout");
+    setTimeout(() => {
+      callback();
+      editorContainer.classList.remove("fadeout");
+    }, 120);
+  }
+
+  async function loadCustomSubjects() {
+    if (!state.user) return;
+
+    // Admins load all subjects from the public collection
+    if (state.isAdmin) {
+        const subjectsSnap = await state.db.collection("subjects").get();
+        subjectsSnap.docs.forEach(doc => {
+            state.customSubjects[doc.id] = { id: doc.id, ...doc.data() };
+        });
+    } else {
+        // Regular users load from their own 'customSubjects' map
+        const userSnap = await state.db.collection("users").doc(state.user.uid).get();
+        if (userSnap.exists) {
+            const data = userSnap.data();
+            state.customSubjects = data.customSubjects || {};
+        }
+    }
+    renderSubjectList();
+  }
+
+  function renderSubjectList() {
+    const list = $("#subjectList");
+    list.innerHTML = "";
+    const query = $("#searchBox").value.toLowerCase();
+
+    const subjects = Object.entries(state.customSubjects)
+      .filter(([id, subj]) => subj.name.toLowerCase().includes(query) || id.toLowerCase().includes(query));
+
+    const renderList = (subjectsToRender, title) => {
+        if (subjectsToRender.length > 0 && title) {
+            list.append(el('div', { className: 'subject-category-title', textContent: title }));
+        }
+        subjectsToRender
+            .sort(([, a], [, b]) => a.name.localeCompare(b.name))
+            .forEach(([id, subj]) => {
+                const iconName = subj.isCustom ? 'person' : (subj.icon || 'article');
+                const div = el("div", { className: "subject-item" }, [
+                    el("span", { className: "material-symbols-outlined subject-icon", textContent: iconName }),
+                    el("span", { textContent: subj.name })
+                ]);
+                div.onclick = () => openSubject(id);
+                if (id === state.currentSubjectId) div.classList.add("active");
+                list.append(div);
+            });
+    };
+
+    if (state.isAdmin) {
+        const adminSubjects = subjects.filter(([, s]) => !s.isCustom);
+        const userSubjects = subjects.filter(([, s]) => s.isCustom);
+        renderList(adminSubjects, 'Admin Subjects');
+        renderList(userSubjects, 'User Subjects');
+    } else {
+        renderList(subjects);
+    }
+  }
+
+  async function createNewSubject(mode, name, id) {
+    let newId = id;
+    let newSubject;
+
+    if (mode === 'user') {
+        if (!name) { alert("Please enter a subject name."); return false; }
+        newId = `custom_${state.user.uid.slice(0, 8)}_${Date.now()}`;
+        newSubject = {
+            id: newId, name, icon: 'edit_note', isCustom: true, isPublic: false,
+            weeks: [], globalButtons: [], owner: state.user.uid, ownerEmail: state.user.email
+        };
+        // For user mode (even for admin), save to the user's private map
+        state.customSubjects[newId] = newSubject;
+        const userRef = state.db.collection("users").doc(state.user.uid);
+        await userRef.set({ customSubjects: { [newId]: newSubject } }, { merge: true });
+
+    } else if (mode === 'admin') {
+        if (!name || !newId) { alert("Please enter both Subject Name and ID."); return; }
+        if (!/^[a-z0-9\-_\.]+$/i.test(newId)) { alert("ID must only contain letters, numbers, -, _, or ."); return; }
+        
+        const doc = await state.db.collection("subjects").doc(newId).get();
+        if (doc.exists) { alert("A subject with this ID already exists. Please choose another."); return; }
+
+        newSubject = {
+            id: newId, name, icon: 'shield_person', isCustom: false, isPublic: true,
+            weeks: [], globalButtons: [], owner: state.user.uid,
+        };
+        // For admin mode, save directly to the public `subjects` collection
+        state.customSubjects[newId] = newSubject;
+        await state.db.collection("subjects").doc(newId).set(newSubject);
+    } else {
+        return; // Should not happen
+    }
+
+    // UI updates after successful creation
+    $('#createSubjectPopup').style.display = 'none';
+    renderSubjectList();
+    openSubject(newId);
+  }
+
+  function handleLegacySubjectCreation() {
+      const name = $("#newSubjectInput").value.trim();
+      if (!name) {
+        alert("Please enter a subject name.");
+        return;
+      }
+      const newId = `custom_${state.user.uid.slice(0, 8)}_${Date.now()}`;
+      const newSubject = {
+        id: newId, name, icon: 'edit_note', isCustom: true, isPublic: false,
+        weeks: [], globalButtons: [], owner: state.user.uid,
+      };
+      state.customSubjects[newId] = newSubject;
+      const userRef = state.db.collection("users").doc(state.user.uid);
+      userRef.set({ customSubjects: { [newId]: newSubject } }, { merge: true });
+
+    // Reset the input field and hide it
+    $("#newSubjectInput").value = '';
+    $("#newSubjectInput").style.display = 'none';
+    $("#newSubjectInput").blur(); // Remove focus
+    $("#addSubjectBtn").style.display = 'flex';
+
+    renderSubjectList();
+  }
+
+  function openSubject(id) {
+    if (state.isDirty && !confirm("You have unsaved changes. Are you sure you want to switch subjects?")) {
+      return;
+    }
+
+    state.currentSubjectId = id;
+    state.draftSubjectData = JSON.parse(JSON.stringify(state.customSubjects[id]));
+    setSaveState("saved");
+    
+    renderSubjectList();
+
+    weeksPanel.style.display = "flex";
+    editorColumn.style.display = "flex";
+    deleteNavBtn.style.display = "flex";
+
+    renderWeeksList();
+    renderVisibilityPanel();
+    openWeek('global');
+  }
+
+  function renderWeeksList() {
+    const list = $(".editor-week-grid");
+    list.innerHTML = "";
+
+    globalWeekBtn.onclick = () => openWeek('global');
+
+    for (let i = 1; i <= 13; i++) {
+      const item = el("button", { className: "editor-week-item control-btn secondary", textContent: `${i}` });
+      item.dataset.week = i;
+      item.onclick = () => openWeek(i);
+      list.append(item);
+    }
+  }
+
+  function openWeek(weekId) {
+    if (state.isDirty && !confirm("You have unsaved changes. Are you sure you want to switch weeks?")) {
+        return;
+    }
+    state.currentWeek = weekId;
+    globalWeekBtn.classList.toggle("active", weekId === 'global');
+    $$(".editor-week-grid .editor-week-item").forEach(item => {
+      item.classList.toggle("active", String(item.dataset.week) === String(weekId));
+    });
+
+    fadeEditor(() => {
+      if (weekId === 'global') {
+        renderGlobalEditor();
+      } else {
+        renderWeekEditor(weekId);
+      }
+    });
+  }
+
+  function renderVisibilityPanel() {
+    const isPublic = state.draftSubjectData.isPublic || false;
+    const isCustomSubject = state.draftSubjectData.isCustom || false;
+
+    // Determine if the panel should be visible.
+    // Show it for non-admins, or for admins editing a user-made subject.
+    const shouldShowPanel = !state.isAdmin || (state.isAdmin && isCustomSubject);
+
+    visibilityPanel.style.display = shouldShowPanel ? 'flex' : 'none';
+
+    if (!shouldShowPanel) {
+      // If panel is hidden (because it's an admin editing an admin-made subject),
+      // ensure the subject is marked as public.
+      if (state.isAdmin && !isCustomSubject) {
+        state.draftSubjectData.isPublic = true;
+      }
+      return;
+    }
+
+    $$('.visibility-option').forEach(opt => {
+        const visibility = opt.dataset.visibility;
+        opt.classList.toggle('active', (isPublic && visibility === 'public') || (!isPublic && visibility === 'private'));
+
+        opt.onclick = () => {
+            const newVisibility = visibility === 'public';
+            if (state.draftSubjectData.isPublic !== newVisibility) {
+                state.draftSubjectData.isPublic = newVisibility;
+                markDirty();
+                renderVisibilityPanel(); // Re-render to update active state
+            }
+        };
+    });
+  }
+
+  function updateDraftDataFromCurrentView() {
+    if (!state.currentSubjectId || state.currentWeek === null) return;
+
+    if (state.currentWeek === 'global') {
+      state.draftSubjectData.name = $("#subjectName")?.value.trim() || state.draftSubjectData.name;
+      state.draftSubjectData.icon = $("#subjectIcon")?.value.trim() || state.draftSubjectData.icon;
+      state.draftSubjectData.globalButtons = [...editorContainer.querySelectorAll("#globalBtns .customBtnRow")].map(b => ({
+        type: b.dataset.type,
+        label: b.querySelector(".btnLabel").value,
+        link: b.querySelector(".btnLink").value,
+        colorName: b.dataset.colorName
+      }));
+    } else {
+      const weekNum = parseInt(state.currentWeek, 10);
+      let weekData = state.draftSubjectData.weeks.find(w => w.week === weekNum);
+      if (!weekData) {
+        weekData = { week: weekNum };
+        state.draftSubjectData.weeks.push(weekData);
+      }
+
+      weekData.topic = (editorContainer.querySelector(".topicField")?.innerHTML || "").trim();
+      weekData.type = (editorContainer.querySelector(".weekType")?.value) || "Lecture";
+      weekData.buttons = [...(editorContainer.querySelectorAll(".buttons-box .customBtnRow") || [])].map(b => ({
+        type: b.dataset.type,
+        label: b.querySelector(".btnLabel").value.trim(),
+        link: b.querySelector(".btnLink").value.trim(),
+        colorName: b.dataset.colorName
+      }));
+
+      state.draftSubjectData.weeks.sort((a, b) => a.week - b.week);
+    }
+  }
+
+  async function saveChanges() {
+    if (!state.currentSubjectId) {
+      alert("No subject selected to save.");
+      return;
+    }
+    // Before saving, ensure the data from the currently visible editor view
+    // is collected and written into the draft object.
+    updateDraftDataFromCurrentView();
+
+    setSaveState("saving");
+
+    try {
+      const subjectId = state.currentSubjectId;
+      const payload = state.draftSubjectData;
+
+      // Update local state immediately for UI responsiveness
+      state.customSubjects[subjectId] = JSON.parse(JSON.stringify(payload));
+
+      // Determine where to save based on role and subject type
+      if (state.isAdmin) {
+          // Admin is editing. Save to the public `subjects` collection.
+          await state.db.collection("subjects").doc(subjectId).set(payload, { merge: true });
+      } else {
+          // User is editing their own custom subject.
+          const userRef = state.db.collection("users").doc(state.user.uid);
+          await userRef.update({
+              [`customSubjects.${subjectId}`]: payload
+          });
+      }
+
+      // Admin also handles public/private state changes
+      const publicRef = state.db.collection("subjects").doc(subjectId);
+      if (payload.isPublic) {
+        // If it's now public, ensure it's in the public collection.
+        // This is mainly for admins making a user's subject public, or creating a new public one.
+        await publicRef.set(payload, { merge: true });
+      } else {
+        // If it's now private, ensure it's deleted from the public collection.
+        // This is crucial for when an admin makes a public subject private.
+        const publicDoc = await publicRef.get();
+        if (publicDoc.exists) {
+            await publicRef.delete();
+        }
+      }
+
+      setSaveState("saved");
+      renderSubjectList(); // Update list in case name changed
+    } catch (e) {
+      console.error("Save failed:", e);
+      setSaveState("error");
+      alert("Error saving changes: " + e.message);
+    }
+  }
+
+  async function deleteCurrentSubject() {
+    if (!state.currentSubjectId) {
+        alert("No subject selected to delete.");
+        return;
+    }
+    if (!confirm(`Are you sure you want to permanently delete "${state.customSubjects[state.currentSubjectId].name}"? This cannot be undone.`)) {
+        return;
+    }
+
+    try {
+        const subjectId = state.currentSubjectId;
+
+        // Delete from local state
+        delete state.customSubjects[subjectId];
+
+        // Delete from Firestore based on role and subject type
+        if (state.isAdmin) {
+            // Admin can delete from both collections
+            await state.db.collection("subjects").doc(subjectId).delete().catch(() => {}); // Public
+            const subjectOwner = state.draftSubjectData.owner;
+            if (subjectOwner) { // If it was a user's custom subject
+                await state.db.collection("users").doc(subjectOwner).update({
+                    [`customSubjects.${subjectId}`]: firebase.firestore.FieldValue.delete()
+                }).catch(() => {});
+            }
+        } else {
+            // User can only delete from their own custom subjects map
+            await state.db.collection("users").doc(state.user.uid).update({
+                [`customSubjects.${subjectId}`]: firebase.firestore.FieldValue.delete()
+            });
+        }
+
+        // Reset UI
+        state.currentSubjectId = null;
+        state.draftSubjectData = null;
+        state.currentWeek = null;
+        weeksPanel.style.display = "none";
+        visibilityPanel.style.display = "none";
+        deleteNavBtn.style.display = "none";
+        editorColumn.style.display = "none";
+        editorContainer.innerHTML = "";
+        renderSubjectList();
+        alert("Subject deleted successfully.");
+
+    } catch (e) {
+        console.error("Deletion failed:", e);
+        alert("Error deleting subject: " + e.message);
+    }
+  }
+
+  /* === EDITOR RENDERING (similar to admin.html) === */
+
+  function createButtonEditor(b, container, isGlobal = false) {
+    const wrap = el("div", { className: "customBtnRow" });
+    const isEmbed = ['slide', 'video', 'book'].includes(b.type);
+
+    wrap.dataset.type = b.type;
+    wrap.dataset.colorName = b.colorName || "green";
+
+    const labelField = isEmbed
+      ? `<input class="btnLabel" type="text" value="${b.label || ''}" readonly style="background:#222; cursor: default;">`
+      : `<input class="btnLabel" type="text" value="${b.label || ''}" placeholder="Button Label">`;
+
+    wrap.innerHTML = `
+      <span class="drag-handle material-symbols-outlined">drag_indicator</span>
+      ${labelField}
+      <input class="btnLink" type="text" value="${b.link || ''}" placeholder="https://...">
+      <button class="removeBtn" title="Remove"><span class="material-symbols-outlined">close</span></button>
+    `;
+
+    wrap.querySelectorAll("input").forEach(inp => {
+      if (!inp.readOnly) inp.addEventListener("input", markDirty);
+    });
+
+    wrap.querySelector(".removeBtn").onclick = () => {
+      wrap.remove();
+      updateAddButtonsVisibility(container, isGlobal);
+      markDirty();
+    };
+    return wrap;
+  }
+
+  function updateAddButtonsVisibility(container, isGlobal = false) {
+    const btnsContainer = isGlobal ? container.querySelector('#globalWeekBtns') : container.querySelector('.weekBtns');
+    const editorBox = isGlobal ? container.querySelector('#globalBtns') : container.querySelector('.buttons-box');
+    if (!btnsContainer || !editorBox) return;
+
+    const buttons = [...editorBox.querySelectorAll(".customBtnRow")];
+    const hasSlide = buttons.some(row => row.dataset.type === 'slide');
+    const hasVideo = buttons.some(row => row.dataset.type === 'video');
+    const hasBook = buttons.some(row => row.dataset.type === 'book');
+
+    btnsContainer.querySelector('.slideBtn').style.display = hasSlide ? "none" : "flex";
+    btnsContainer.querySelector('.videoBtn').style.display = hasVideo ? "none" : "flex";
+    btnsContainer.querySelector('.bookBtn').style.display = hasBook ? "none" : "flex";
+  }
+
+  function renderGlobalEditor() {
+    editorContainer.innerHTML = `
+      <h2>Global Settings</h2>
+      <label for="subjectName">Subject Name</label>
+      <input id="subjectName">
+      <label for="subjectIcon">Subject Icon</label>
+      <input id="subjectIcon" placeholder="e.g., science, history_edu, calculate">
+
+      <div class="global">
+        <h3>Global Resource Links</h3>
+        <div id="globalBtns"></div>
+        <div class="weekBtns" id="globalWeekBtns" style="margin-top: 20px;">
+          <button class="addBtn slideBtn"><span class="material-symbols-outlined">slideshow</span>Slide</button>
+          <button class="addBtn videoBtn"><span class="material-symbols-outlined">play_circle</span>Video</button>
+          <button class="addBtn bookBtn"><span class="material-symbols-outlined">menu_book</span>Book</button>
+          <button class="addBtn addCustom"><span class="material-symbols-outlined">add_link</span>Custom</button>
+        </div>
+      </div>
+    `;
+
+    $("#subjectName").value = state.draftSubjectData.name || "";
+    $("#subjectIcon").value = state.draftSubjectData.icon || "";
+
+    const box = $("#globalBtns");
+    (state.draftSubjectData.globalButtons || []).forEach(b => box.append(createButtonEditor(b, editorContainer, true)));
+    new Sortable(box, { animation: 150, handle: '.drag-handle', onEnd: markDirty });
+
+    const addBtn = (selector, type, label) => {
+        editorContainer.querySelector(selector).onclick = () => {
+            box.append(createButtonEditor({ type, label }, editorContainer, true));
+            updateAddButtonsVisibility(editorContainer, true);
+            markDirty();
+        };
+    };
+    addBtn(".slideBtn", 'slide', 'Slides');
+    addBtn(".videoBtn", 'video', 'Video Lecture');
+    addBtn(".bookBtn", 'book', 'Textbook');
+    addBtn(".addCustom", 'custom', '');
+
+    updateAddButtonsVisibility(editorContainer, true);
+
+    ["#subjectName", "#subjectIcon"].forEach(sel => $(sel).addEventListener("input", markDirty));
+  }
+
+  function renderWeekEditor(weekNum) {
+    const weekData = (state.draftSubjectData.weeks || []).find(w => w.week === weekNum) || {};
+    editorContainer.innerHTML = `
+      <h2>Week ${weekNum}</h2>
+      <label>Topic</label>
+      <div class="topicField" contenteditable="true">${weekData.topic || ""}</div>
+
+      <label>Week Type</label>
+      <select class="weekType">
+        <option value="Lecture">Lecture</option>
+        <option value="Lecture (Quiz)">Lecture (Quiz)</option>
+        <option value="Midterm">Midterm</option>
+        <option value="Finals">Finals</option>
+        <option value="Presentation">Presentation</option>
+        <option value="No Lecture">No Lecture</option>
+      </select>
+
+      <label>Resource Links</label>
+      <div class="buttons-box"></div>
+
+      <div class="weekBtns" style="margin-top: 20px;">
+        <button class="addBtn slideBtn"><span class="material-symbols-outlined">slideshow</span>Slide</button>
+        <button class="addBtn videoBtn"><span class="material-symbols-outlined">play_circle</span>Video</button>
+        <button class="addBtn bookBtn"><span class="material-symbols-outlined">menu_book</span>Book</button>
+        <button class="addBtn addCustom"><span class="material-symbols-outlined">add_link</span>Custom</button>
+      </div>
+    `;
+
+    const typeSelect = editorContainer.querySelector('.weekType');
+    if (weekData.type) typeSelect.value = weekData.type;
+
+    const btnBox = editorContainer.querySelector('.buttons-box');
+    (weekData.buttons || []).forEach(b => btnBox.append(createButtonEditor(b, editorContainer, false)));
+    new Sortable(btnBox, { animation: 150, handle: '.drag-handle', onEnd: markDirty });
+
+    const addBtn = (selector, type, label) => {
+        editorContainer.querySelector(selector).onclick = () => {
+            btnBox.append(createButtonEditor({ type, label }, editorContainer, false));
+            updateAddButtonsVisibility(editorContainer, false);
+            markDirty();
+        };
+    };
+    addBtn(".slideBtn", 'slide', 'Slides');
+    addBtn(".videoBtn", 'video', 'Video Lecture');
+    addBtn(".bookBtn", 'book', 'Textbook');
+    addBtn(".addCustom", 'custom', '');
+
+    updateAddButtonsVisibility(editorContainer, false);
+
+    editorContainer.querySelector(".topicField").addEventListener("input", markDirty);
+    typeSelect.addEventListener("input", markDirty);
+  }
+
+  /* === INITIALIZATION === */
+
+  function initEventListeners() {
+    $("#searchBox").oninput = renderSubjectList;
+    $("#applyNavBtn").onclick = saveChanges;
+    $("#deleteNavBtn").onclick = deleteCurrentSubject;
+
+    // Subject Creation Logic
+    $("#addSubjectBtn").onclick = () => {
+        const popup = $('#createSubjectPopup');
+        const modeSelector = $('.popup-mode-selector');
+        const idRow = $('#popupIdRow');
+
+        if (state.isAdmin) {
+            // Admin sees the full popup with mode selection
+            modeSelector.style.display = 'grid';
+            // Reset to default 'user' mode view
+            $('.popup-mode-selector .active').classList.remove('active');
+            $('.popup-mode-selector .mode-btn[data-mode="user"]').classList.add('active');
+            idRow.style.display = 'none';
+        } else {
+            // Regular user sees a simplified popup
+            modeSelector.style.display = 'none';
+            idRow.style.display = 'none';
+        }
+        popup.style.display = 'flex';
+        $('#popupSubjectName').focus();
+    };
+
+    // Popup specific logic (for admin)
+    const popup = $('#createSubjectPopup');
+    if (popup) {
+        const idRow = $('#popupIdRow');
+        $('.popup-mode-selector').onclick = (e) => {
+            if (e.target.classList.contains('mode-btn')) {
+                $('.popup-mode-selector .active').classList.remove('active');
+                e.target.classList.add('active');
+                idRow.style.display = e.target.dataset.mode === 'admin' ? 'flex' : 'none';
+            }
+        };
+        $('#popupCancelBtn').onclick = () => { popup.style.display = 'none'; };
+        $('#popupCreateBtn').onclick = () => {
+            // If admin, get mode from selector. If not, default to 'user'.
+            const mode = state.isAdmin ? $('.popup-mode-selector .active').dataset.mode : 'user';
+            const name = $('#popupSubjectName').value.trim();
+            const id = $('#popupSubjectId').value.trim();
+            createNewSubject(mode, name, id);
+        };
+    }
+
+    document.addEventListener("keydown", (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s") {
+        e.preventDefault();
+        saveChanges();
+      }
+    });
+  }
+
+  function initAuth() {
+    const loadingOverlay = $("#loadingOverlay");
+    const loginOverlay = $("#login-overlay");
+
+    state.auth.onAuthStateChanged(async u => {
+      state.user = u || null;
+      if (state.user) {
+        loginOverlay.style.display = "none";
+        loadingOverlay.classList.remove("hidden");
+        state.isAdmin = ADMIN_EMAILS.includes(state.user.email);
+        
+        await loadCustomSubjects();
+        initEventListeners();
+        loadingOverlay.classList.add("hidden");
+        setSaveState("saved");
+      } else {
+        loginOverlay.style.display = "flex";
+        loadingOverlay.classList.add("hidden");
+        // Clear UI
+        state.isAdmin = false;
+        state.customSubjects = {};
+        renderSubjectList();
+      }
+    });
+
+    $("#signInBtn").onclick = async () => {
+      const provider = new firebase.auth.GoogleAuthProvider();
+      try {
+        await state.auth.signInWithPopup(provider);
+      } catch (err) {
+        console.error("Sign-in error:", err);
+        alert("Sign-in failed. Please try again.");
+      }
+    };
+  }
+
+  function main() {
+    fetch("https://raw.githubusercontent.com/WEEKGE/live/main/config.json")
+      .then(r => r.json())
+      .then(cfg => {
+        firebase.initializeApp(cfg);
+        state.auth = firebase.auth();
+        state.db = firebase.firestore();
+        initAuth();
+        setSaveState("saved");
+      })
+      .catch(() => {
+        $("#loadingOverlay").innerHTML = "<h2 style='color:red;text-align:center;margin-top:30vh;'>⚠️ Config could not be loaded.</h2>";
+      });
+  }
+
+  main();
+
+})();
+</script>
+
+</body>
+</html>

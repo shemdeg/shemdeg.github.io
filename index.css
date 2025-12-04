@@ -166,7 +166,7 @@ body[data-active-view="live-view"] #live-view {
 /* === VIEW-SPECIFIC GRID STYLES === */
 #home-grid {
   grid-template-columns: repeat(5, 1fr);
-  grid-auto-rows: minmax(0, 1fr); /* Allow rows to grow and shrink */
+  grid-auto-rows: 1fr; /* Make rows equal to column width for square cells */
   height: 100%;
 }
 
@@ -182,6 +182,7 @@ body[data-active-view="live-view"] #live-view {
   display: flex;
   flex-direction: column;
   gap: 15px;
+  /* aspect-ratio is no longer needed as grid-auto-rows handles it */
   transition: box-shadow 0.2s ease;
   overflow: hidden; /* Prevent content from spilling out of the card */
   min-height: 150px; /* Set a minimum height for better appearance */
@@ -316,11 +317,13 @@ body[data-active-view="live-view"] #live-view {
   grid-template-columns: 1fr 1fr 1fr;
   gap: 20px;
   padding: 20px;
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    grid-template-rows: auto auto;
-    gap: 20px;
-    padding: 20px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: auto auto;
+  gap: 20px;
+  grid-column: span 2;
+  grid-row: span 1;
+  padding: 20px; /* Keep padding inside */
 }
 .summary-item {
   display: flex;
@@ -347,10 +350,9 @@ body[data-active-view="live-view"] #live-view {
   animation: pulse-opacity 2.5s ease-in-out infinite;
 }
 .subject-card.is-upcoming {
-  background-color: color-mix(in srgb, var(--accent-color) 8%, var(--widget-color));
-  border: 1px solid color-mix(in srgb, var(--accent-color) 20%, transparent);
-  /* Apply both the fade-in and the pulse animation */
-  animation: widget-fade-in 0.4s ease-out both, pulse-opacity 2.5s ease-in-out infinite 0.5s;
+  /* The background color is now the same as other widgets */
+  border: 1px solid var(--accent-color);
+  /* The pulsing animation has been removed. The fade-in is inherited from .subject-card */
 }
 
 .subject-card {
@@ -507,7 +509,7 @@ body[data-active-view="live-view"] #live-view {
 .settings-item .name { flex-grow: 1; font-weight: 500; }
 .settings-item .action-btn {
   background-color: var(--accent-color);
-  color: var(--bg-color);
+  color: var(--text-on-accent-color);
   border: none;
   width: 36px; height: 36px;
   border-radius: 12px;
@@ -622,21 +624,22 @@ body[data-active-view="live-view"] #live-view {
   border-radius: 12px;
   border: 1px solid transparent;
   background-color: color-mix(in srgb, var(--text-color) 5%, transparent);
-  color: var(--text-muted-color);
+  color: var(--text-color);
   cursor: pointer;
   display: grid;
   place-items: center;
   font-size: 0.9rem;
-  font-weight: 600;
+  font-weight: 500;
   transition: all 0.2s ease;
   flex: 1;
+  font-family: var(--font-family);
 }
 .weekday-btn:hover {
   background-color: color-mix(in srgb, var(--text-color) 10%, transparent);
 }
 .weekday-btn.active {
   background-color: var(--accent-color);
-  color: var(--bg-color);
+  color: var(--text-on-accent-color);
 }
 .subject-widget-container {
   animation: fadeIn 0.3s ease-in-out;
